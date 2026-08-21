@@ -6,7 +6,7 @@ from pathlib import Path
 
 # 推論を行うデバイス、モデルのパス設定
 BASE_DIR = Path(__file__).resolve().parent
-MODE = "npu_fp16"                       # cpu_fp32 / gpu_fp32 / gpu_fp16 / npu_fp16
+MODE = "gpu_fp16"                       # cpu_fp32 / gpu_fp32 / gpu_fp16 / npu_fp16
 MODEL = BASE_DIR / "../onnx/yolov8m_640.onnx"
 SAVE_PATH = BASE_DIR / "output/detection.bmp"
 
