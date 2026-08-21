@@ -5,7 +5,7 @@ import numpy as np
 
 
 
-
+#ベクトルを２つ入れて、角度を計算する
 def calculate_angle_between_vector(v1, v2):
     v1 = np.array(v1)
     v2 = np.array(v2)
@@ -29,7 +29,6 @@ def calculate_angle_between_vector(v1, v2):
     return angle_deg
 
 
-
 try:
     # Mediapipeの初期化
     mp_pose = mp.solutions.pose
@@ -45,7 +44,7 @@ try:
         exit()
 
     # ウィンドウサイズを変更するスケール（例: 0.5 で半分の大きさ）
-    resize_scale = 1
+    resize_scale = 1.5
 
     # 保存する動画の設定
     output_filename = "output_pose_video.avi"
@@ -57,10 +56,10 @@ try:
     out = cv2.VideoWriter(output_filename, fourcc, fps, (frame_width, frame_height))
 
 
-    right_ankle_angles = []
-    right_knee_angles = []
-    left_ankle_angles = []
-    left_knee_angles = []
+    right_ankle_angles_list = []
+    right_knee_angles_list = []
+    left_ankle_angles_list = []
+    left_knee_angles_list = []
 
 
     while True:
@@ -74,6 +73,12 @@ try:
 
         # フレームサイズを縮小
         small_frame = cv2.resize(frame, (int(width * resize_scale), int(height * resize_scale)))
+
+
+        small_height, small_width, _ = small_frame.shape
+
+        print("small_size")
+        print(small_height, small_width)
 
         # BGRからRGBに変換（Mediapipeが必要とするフォーマット）
         frame_rgb = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
@@ -96,24 +101,23 @@ try:
 
 
 
-        right_foot = [mp_holistic.PoseLandmark.RIGHT_KNEE, mp_holistic.PoseLandmark.RIGHT_ANKLE, mp_holistic.PoseLandmark.RIGHT_FOOT_INDEX]
-        left_foot = [mp_holistic.PoseLandmark.LEFT_KNEE, mp_holistic.PoseLandmark.LEFT_ANKLE, mp_holistic.PoseLandmark.LEFT_FOOT_INDEX]
+        right_number = [mp_holistic.PoseLandmark.RIGHT_HIP, mp_holistic.PoseLandmark.RIGHT_KNEE, mp_holistic.PoseLandmark.RIGHT_ANKLE, mp_holistic.PoseLandmark.RIGHT_FOOT_INDEX]
+        left_number = [mp_holistic.PoseLandmark.LEFT_HIP, mp_holistic.PoseLandmark.LEFT_KNEE, mp_holistic.PoseLandmark.LEFT_ANKLE, mp_holistic.PoseLandmark.LEFT_FOOT_INDEX]
 
-        
-
-
+    
 
         if result.pose_landmarks:
-            print("result1")
-            print(result.pose_landmarks)
-            print(type(result.pose_landmarks))
-            print("result2")
-            print(result.pose_landmarks.landmark)
-            print(type(result.pose_landmarks.landmark))
 
-            print("result3 nose")
-            print(result.pose_landmarks.landmark[mp_holistic.PoseLandmark.NOSE])
-            print(type(result.pose_landmarks.landmark[mp_holistic.PoseLandmark.NOSE]))
+            # print("result1")
+            # print(result.pose_landmarks)
+            # print(type(result.pose_landmarks))
+            # print("result2")
+            # print(result.pose_landmarks.landmark)
+            # print(type(result.pose_landmarks.landmark))
+
+            # print("result3 nose")
+            # print(result.pose_landmarks.landmark[mp_holistic.PoseLandmark.NOSE])
+            # print(type(result.pose_landmarks.landmark[mp_holistic.PoseLandmark.NOSE]))
 
 
             mp_drawing.draw_landmarks(
@@ -125,13 +129,16 @@ try:
 
             
             # 各関節の座標を取得して出力
-            for i in right_foot:
+            right_pixcel = []
+            for i in right_number:
                 right = result.pose_landmarks.landmark[i]
 
                 x = right.x * width    # x座標をピクセル単位に変換
                 y = right.y * height   # y座標をピクセル単位に変換
                 z = right.z            # z座標（深度情報）は正規化されている
 
+                right_pixcel = [x, y, z]
+                pixel = np.array([x, y, z])
                 point = np.array([right.x, right.y, right.z])
                 #右足
                 #26 膝
@@ -147,14 +154,17 @@ try:
 
                 print(f"right関節 {i}: x={x:.2f}, y={y:.2f}, z={z:.2f}")
 
-
-            for i in left_foot:
+            left_pixel = []
+            for i in left_number:
                 left = result.pose_landmarks.landmark[i]
                 x = left.x * width    # x座標をピクセル単位に変換
                 y = left.y * height   # y座標をピクセル単位に変換
                 z = left.z            # z座標（深度情報）は正規化されている
 
+                pixel = np.array([x, y, z])
                 point = np.array([left.x, left.y, left.z])
+
+                left_pixel = [x, y, z]
 
                 #左足
                 #25 膝
@@ -170,16 +180,48 @@ try:
 
 
             print("right_detedtec[26]")
-            vec_right_26_28 = right_detected[26] - right_detected[28]
-            vec_right_32_28 = right_detected[32] - right_detected[28]
+            vec_right_ankle2knee = right_detected[26] - right_detected[28]
+            vec_right_ankle2footindex = right_detected[32] - right_detected[28]
+            vec_right_knee2hip = right_detected[24] - right_detected[26]
+            vec_right_knee2ankle = right_detected[28] - right_detected[26]
+
+
+            vec_left_ankle2knee = left_detected[25] - left_detected[27]
+            vec_left_ankle2footindex = left_detected[31] - left_detected[27]
+            vec_left_knee2hip = left_detected[23] - left_detected[25]
+            vec_left_knee2ankle = left_detected[27] - left_detected[25]
 
 
 
-            right_angle_ankle = calculate_angle_between_vector(vec_right_26_28, vec_right_32_28)
+            right_angle_ankle = calculate_angle_between_vector(vec_right_ankle2knee, vec_right_ankle2footindex)
+            right_angle_knee = calculate_angle_between_vector(vec_right_ankle2knee, vec_right_ankle2footindex)
+            left_angle_ankle = calculate_angle_between_vector(vec_right_ankle2knee, vec_right_ankle2footindex)
+            left_angle_knee = calculate_angle_between_vector(vec_right_ankle2knee, vec_right_ankle2footindex)
+
+
             print("angle")
             print(right_angle_ankle)
 
-            right_angles.append(right_angle_ankle)
+            right_ankle_angles_list.append(right_angle_ankle)
+            right_knee_angles_list.append(right_angle_knee)
+            left_ankle_angles_list.append(left_angle_ankle)
+            left_knee_angles_list.append(left_angle_knee)
+
+
+
+
+
+            text = "x: " + str(int(right_pixcel[0])) + ", " + "y: " + str(int(right_pixcel[1])) + ", z: " + str(int(right_pixcel[2]))
+            cv2.putText(small_frame,
+                text,
+                org=(200, 50),
+                fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                fontScale=1.5,
+                color=(0, 255, 0),
+                thickness=2,
+                lineType=cv2.LINE_AA)
+
+
 
 
 
@@ -202,7 +244,10 @@ try:
 
 
 except:
-    print(angles)
+    print(right_ankle_angles_list)
+    # print(right_knee_angles_list)
+    # print(left_ankle_angles_list)
+    # print(left_knee_angles_list)
 
     # リソースを解放
     cap.release()
