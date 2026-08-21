@@ -32,7 +32,7 @@ while cap.isOpened():
         names = results[0].names
         classes = results[0].boxes.cls
         boxes = results[0].boxes
-        boxedframe = results[0].plot()
+        #boxedframe = results[0].plot()
 
         for box in boxes:
             cls_id = int(box.cls[0])
@@ -41,12 +41,13 @@ while cap.isOpened():
                         x1,y1,x2,y2 = box.xyxy[0].tolist()
                         cx = (x1+x2)/2
                         cy = (y1+y2)/2
-                        print(f"中心座標:({cx},{cy})")
-                        cv2.circle(boxedframe, (int(cx),int(cy)), 10,(0,0,255), -1)
+                        #print(f"中心座標:({cx},{cy})")
+                        cv2.rectangle(frame, (int(x1), int(y1) ), (int(x2), int(y2)), (0,0,255), 2)
+                        cv2.circle(frame, (int(cx),int(cy)), 5,(0,0,255), -1)
 
-            cv2.imshow("center",boxedframe) 
+            cv2.imshow("center",frame) 
 
-            if cv2.waitKey(1) & 0xFF == ord("q"):
+        if cv2.waitKey(1) & 0xFF == ord("q"):
                   break
     else:
           break    
