@@ -1,6 +1,5 @@
 import cv2
 from ultralytics import YOLO
-import openvino as ov
 
 model = YOLO("yolov8n.pt") 
 video_path = "C:\\Users\\intern02\\Desktop\\intern\\sample\\img\\ball.mp4"
