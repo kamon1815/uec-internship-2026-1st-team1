@@ -4,6 +4,8 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+from collections import deque
+import matplotlib.pyplot as plt
 
 
 
@@ -66,7 +68,42 @@ try:
 
     out = cv2.VideoWriter(output_filename, fourcc, fps, (frame_width, frame_height))
 
-    #計算した関節角度を保存するリスト
+
+    #maxlen個の角度を保存する
+    #追跡やグラフ表示に使用する
+    first_frame_num = 0
+    last_frame_num = 50
+
+    right_ankle_angles_traj = deque([0] * last_frame_num, maxlen=last_frame_num)
+    right_knee_angles_traj = deque([0] * last_frame_num, maxlen=last_frame_num)
+    left_ankle_angles_traj = deque([0] * last_frame_num, maxlen=last_frame_num)
+    left_knee_angles_traj = deque([0] * last_frame_num, maxlen=last_frame_num)
+
+
+    print("traj")
+    print(right_ankle_angles_traj)
+
+    #グラフの初期化
+    #x軸、時間軸、1フレームごと
+    graph_x = np.arange(first_frame_num, last_frame_num)
+
+    #最初の表示部分
+    lines_r_ankle, = plt.plot(graph_x, right_ankle_angles_traj, color="g", label="Angle R Ankle")
+    lines_r_knee, = plt.plot(graph_x, right_knee_angles_traj, color="b", label="Angle R Knee")
+
+    plt.xlabel("frame number")
+    plt.ylabel("angle[degrees]")
+
+    plt.xlim(first_frame_num, last_frame_num)
+    plt.ylim(0, 180)
+
+    plt.legend(loc="lower left")
+
+    # plt.show()
+
+
+
+    #計算したすべての関節角度を保存するリスト
     right_ankle_angles_list = []
     right_knee_angles_list = []
     left_ankle_angles_list = []
@@ -226,6 +263,8 @@ try:
             left_ankle_angles_list.append(left_angle_ankle)
             left_knee_angles_list.append(left_angle_knee)
 
+            
+
 
 
             print("right_pixcel")
@@ -302,8 +341,26 @@ try:
             # cv2.ellipse(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), (50, 50), 0, 0, right_angle_knee, (0, 255, 0), 2)
 
 
+            #グラフ表示のための更新
+            right_ankle_angles_traj.append(right_angle_ankle)
+            right_knee_angles_traj.append(right_angle_knee)
+            left_ankle_angles_traj.append(left_angle_ankle)
+            left_knee_angles_traj.append(left_angle_knee)
 
-
+            # x += 1
+            print("x")
+            print(graph_x)
+            first_frame_num += 1
+            last_frame_num += 1
+        
+            lines_r_ankle.set_data(graph_x, right_ankle_angles_traj)
+            lines_r_knee.set_data(graph_x, right_knee_angles_traj)
+        
+        
+            plt.xlim(graph_x.min(), graph_x.max())
+        
+        
+            plt.pause(0.01)
 
 
         # 縮小されたフレームを保存
