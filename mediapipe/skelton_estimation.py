@@ -59,7 +59,7 @@ try:
 
     out = cv2.VideoWriter(output_filename, fourcc, fps, (frame_width, frame_height))
 
-
+    #計算した関節角度を保存するリスト
     right_ankle_angles_list = []
     right_knee_angles_list = []
     left_ankle_angles_list = []
@@ -144,15 +144,16 @@ try:
                 z = right.z            # z座標（深度情報）は正規化されている
 
                 right_pixcel[i] = [x, y, z]
-                pixel = np.array([x, y, z])
-                point = np.array([right.x, right.y, right.z])
+                pixel = np.array([x, y])
+                # point = np.array([right.x, right.y, right.z])
+                point = np.array([right.x, right.y])
 
                 #右足
                 #26 膝
                 #28 足首
                 #30 かかと
                 #32 つま先（人差し指）
-                right_detected[i] = point
+                right_detected[i] = pixel
                 
                 print("right_detedted")
                 print(right_detected)
@@ -170,8 +171,9 @@ try:
                 y = left.y * small_height   # y座標をピクセル単位に変換
                 z = left.z            # z座標（深度情報）は正規化されている
 
-                pixel = np.array([x, y, z])
-                point = np.array([left.x, left.y, left.z])
+                pixel = np.array([x, y])
+                # point = np.array([left.x, left.y, left.z])
+                point = np.array([left.x, left.y])
 
                 left_pixel[i] = [x, y, z]
 
@@ -181,7 +183,7 @@ try:
                 #29 かかと
                 #31 つま先（人差し指）
 
-                left_detected[i] = point
+                left_detected[i] = pixel
                 print("left_detedted")
                 print(left_detected)
 
@@ -204,7 +206,7 @@ try:
 
 
             right_angle_ankle = calculate_angle_between_vector(vec_right_ankle2knee, vec_right_ankle2footindex)
-            right_angle_knee = calculate_angle_between_vector(vec_right_knee2hip, vec_right_knee2ankle)
+            right_angle_knee = calculate_angle_between_vector(vec_right_knee2ankle,vec_right_knee2hip)
             left_angle_ankle = calculate_angle_between_vector(vec_left_ankle2knee, vec_left_ankle2footindex)
             left_angle_knee = calculate_angle_between_vector(vec_left_knee2hip, vec_left_knee2ankle)
 
