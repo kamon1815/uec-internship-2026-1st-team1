@@ -88,8 +88,10 @@ try:
     graph_x = np.arange(first_frame_num, last_frame_num)
 
     #最初の表示部分
-    lines_r_ankle, = plt.plot(graph_x, right_ankle_angles_traj, color="g", label="Angle R Ankle")
-    lines_r_knee, = plt.plot(graph_x, right_knee_angles_traj, color="b", label="Angle R Knee")
+    lines_r_ankle, = plt.plot(graph_x, right_ankle_angles_traj, color="#ff6347", label="Angle R Ankle")
+    lines_r_knee, = plt.plot(graph_x, right_knee_angles_traj, color="#ffa500", label="Angle R Knee")
+    lines_l_ankle, = plt.plot(graph_x, left_ankle_angles_traj, color="#40e0d0", label="Angle L Ankle")
+    lines_l_knee, = plt.plot(graph_x, left_knee_angles_traj, color="#90ee90", label="Angle L Knee")
 
     plt.xlabel("frame number")
     plt.ylabel("angle[degrees]")
@@ -297,7 +299,7 @@ try:
                 org=(0, 30),
                 fontFace=cv2.FONT_HERSHEY_DUPLEX,
                 fontScale=0.8,
-                color=(0, 255, 0),
+                color=(71, 99, 255),
                 thickness=2,
                 lineType=cv2.LINE_AA)
 
@@ -307,7 +309,7 @@ try:
                 org=(0, 60),
                 fontFace=cv2.FONT_HERSHEY_DUPLEX,
                 fontScale=0.8,
-                color=(255, 0, 0),
+                color=(0, 165, 255),
                 thickness=2,
                 lineType=cv2.LINE_AA)
 
@@ -316,7 +318,7 @@ try:
                 org=(0, 90),
                 fontFace=cv2.FONT_HERSHEY_DUPLEX,
                 fontScale=0.8,
-                color=(0, 0, 255),
+                color=(208, 224, 64),
                 thickness=2,
                 lineType=cv2.LINE_AA)
 
@@ -325,42 +327,43 @@ try:
                 org=(0, 120),
                 fontFace=cv2.FONT_HERSHEY_DUPLEX,
                 fontScale=0.8,
-                color=(255, 255, 0),
+                color=(144, 238, 144),
                 thickness=2,
                 lineType=cv2.LINE_AA)
             
 
 
-            cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), 5, (0, 255, 0), -1)
-            cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][1])), 5, (255, 0, 0), -1)
-            cv2.circle(small_frame, (int(left_pixcel[mp_holistic.PoseLandmark.LEFT_ANKLE][0]), int(left_pixcel[mp_holistic.PoseLandmark.LEFT_ANKLE][1])), 5, (0, 0, 255), -1)
-            cv2.circle(small_frame, (int(left_pixcel[mp_holistic.PoseLandmark.LEFT_KNEE][0]), int(left_pixcel[mp_holistic.PoseLandmark.LEFT_KNEE][1])), 5, (255, 255, 0), -1)
+            cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), 5, (71, 99, 255), -1)
+            cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][1])), 5, (0, 165, 255), -1)
+            cv2.circle(small_frame, (int(left_pixcel[mp_holistic.PoseLandmark.LEFT_ANKLE][0]), int(left_pixcel[mp_holistic.PoseLandmark.LEFT_ANKLE][1])), 5, (208, 224, 64), -1)
+            cv2.circle(small_frame, (int(left_pixcel[mp_holistic.PoseLandmark.LEFT_KNEE][0]), int(left_pixcel[mp_holistic.PoseLandmark.LEFT_KNEE][1])), 5, (144, 238, 144), -1)
 
 
             #角度部分をわかりやすく表示
             # cv2.ellipse(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), (50, 50), 0, 0, right_angle_knee, (0, 255, 0), 2)
 
 
-            #グラフ表示のための更新
+            ######グラフ表示のための更新
             right_ankle_angles_traj.append(right_angle_ankle)
             right_knee_angles_traj.append(right_angle_knee)
             left_ankle_angles_traj.append(left_angle_ankle)
             left_knee_angles_traj.append(left_angle_knee)
 
             # x += 1
-            print("x")
-            print(graph_x)
-            first_frame_num += 1
-            last_frame_num += 1
+            # print("x")
+            # print(graph_x)
         
             lines_r_ankle.set_data(graph_x, right_ankle_angles_traj)
             lines_r_knee.set_data(graph_x, right_knee_angles_traj)
+            lines_l_ankle.set_data(graph_x, left_ankle_angles_traj)
+            lines_l_knee.set_data(graph_x, left_knee_angles_traj)
         
         
             plt.xlim(graph_x.min(), graph_x.max())
         
         
             plt.pause(0.01)
+            ######
 
 
         # 縮小されたフレームを保存
