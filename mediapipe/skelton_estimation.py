@@ -285,6 +285,7 @@ try:
                 color=(255, 255, 0),
                 thickness=2,
                 lineType=cv2.LINE_AA)
+            
 
 
             cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), 5, (0, 255, 0), -1)
@@ -293,8 +294,8 @@ try:
             cv2.circle(small_frame, (int(left_pixcel[mp_holistic.PoseLandmark.LEFT_KNEE][0]), int(left_pixcel[mp_holistic.PoseLandmark.LEFT_KNEE][1])), 5, (255, 255, 0), -1)
 
 
-
-
+            #角度部分をわかりやすく表示
+            # cv2.ellipse(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), (50, 50), 0, 0, right_angle_knee, (0, 255, 0), 2)
 
 
 
@@ -314,9 +315,10 @@ try:
 
 
 
-except:
+finally:
+    print("angles_list")
     print(right_ankle_angles_list)
-    # print(right_knee_angles_list)
+    print(right_knee_angles_list)
     # print(left_ankle_angles_list)
     # print(left_knee_angles_list)
 
