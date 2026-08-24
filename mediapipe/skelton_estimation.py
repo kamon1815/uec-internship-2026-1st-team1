@@ -26,6 +26,9 @@ def calculate_angle_between_vector(v1, v2):
     if angle_deg < 0:
         angle_deg += 360
 
+    if angle_deg > 180:
+        angle_deg = 360 - angle_deg
+
     return angle_deg
 
 
@@ -153,7 +156,7 @@ try:
                 #28 足首
                 #30 かかと
                 #32 つま先（人差し指）
-                right_detected[i] = pixel
+                right_detected[i] = point
                 
                 print("right_detedted")
                 print(right_detected)
@@ -164,7 +167,7 @@ try:
 
 
 
-            left_pixel = {}
+            left_pixcel = {}
             for i in left_number:
                 left = result.pose_landmarks.landmark[i]
                 x = left.x * small_width    # x座標をピクセル単位に変換
@@ -175,7 +178,7 @@ try:
                 # point = np.array([left.x, left.y, left.z])
                 point = np.array([left.x, left.y])
 
-                left_pixel[i] = [x, y, z]
+                left_pixcel[i] = [x, y, z]
 
                 #左足
                 #25 膝
@@ -183,7 +186,7 @@ try:
                 #29 かかと
                 #31 つま先（人差し指）
 
-                left_detected[i] = pixel
+                left_detected[i] = point
                 print("left_detedted")
                 print(left_detected)
 
@@ -247,26 +250,47 @@ try:
             #     lineType=cv2.LINE_AA)
 
             cv2.putText(small_frame,
-                str(int(right_angle_ankle)),
-                org=(0, 50),
+                f"Angle R Ankle: {right_angle_ankle:.1f}",
+                org=(0, 30),
                 fontFace=cv2.FONT_HERSHEY_DUPLEX,
-                fontScale=1.5,
+                fontScale=0.8,
                 color=(0, 255, 0),
                 thickness=2,
                 lineType=cv2.LINE_AA)
 
 
             cv2.putText(small_frame,
-                str(int(right_angle_knee)),
-                org=(0, 100),
+                f"Angle R Knee: {right_angle_knee:.1f}",
+                org=(0, 60),
                 fontFace=cv2.FONT_HERSHEY_DUPLEX,
-                fontScale=1.5,
-                color=(0, 255, 0),
+                fontScale=0.8,
+                color=(255, 0, 0),
+                thickness=2,
+                lineType=cv2.LINE_AA)
+
+            cv2.putText(small_frame,
+                f"Angle L Ankle: {left_angle_ankle:.1f}",
+                org=(0, 90),
+                fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                fontScale=0.8,
+                color=(0, 0, 255),
+                thickness=2,
+                lineType=cv2.LINE_AA)
+
+            cv2.putText(small_frame,
+                f"Angle L Knee: {left_angle_knee:.1f}",
+                org=(0, 120),
+                fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                fontScale=0.8,
+                color=(255, 255, 0),
                 thickness=2,
                 lineType=cv2.LINE_AA)
 
 
-            cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), 5, (255, 0, 0), -1)
+            cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), 5, (0, 255, 0), -1)
+            cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][1])), 5, (255, 0, 0), -1)
+            cv2.circle(small_frame, (int(left_pixcel[mp_holistic.PoseLandmark.LEFT_ANKLE][0]), int(left_pixcel[mp_holistic.PoseLandmark.LEFT_ANKLE][1])), 5, (0, 0, 255), -1)
+            cv2.circle(small_frame, (int(left_pixcel[mp_holistic.PoseLandmark.LEFT_KNEE][0]), int(left_pixcel[mp_holistic.PoseLandmark.LEFT_KNEE][1])), 5, (255, 255, 0), -1)
 
 
 
