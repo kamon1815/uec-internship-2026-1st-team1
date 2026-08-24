@@ -36,8 +36,12 @@ try:
     mp_drawing = mp.solutions.drawing_utils
     mp_holistic = mp.solutions.holistic
 
+    #サッカーの動画
+    path = r"C:\Users\intern01\Desktop\mysample\videoplayback.mp4"
+
     # 動画キャプチャの初期化
-    cap = cv2.VideoCapture(0)  # ここではwebカメラ
+    # cap = cv2.VideoCapture(0)  # ここではwebカメラ
+    cap = cv2.VideoCapture(path)  # ここでは保存した動画
 
     if not cap.isOpened():
         print("Error: カメラまたは動画を開けませんでした。")
@@ -100,7 +104,7 @@ try:
         #         print(f"関節 {i}: x={x:.2f}, y={y:.2f}, z={z:.2f}")
 
 
-
+        #取得したい関節の番号
         right_number = [mp_holistic.PoseLandmark.RIGHT_HIP, mp_holistic.PoseLandmark.RIGHT_KNEE, mp_holistic.PoseLandmark.RIGHT_ANKLE, mp_holistic.PoseLandmark.RIGHT_FOOT_INDEX]
         left_number = [mp_holistic.PoseLandmark.LEFT_HIP, mp_holistic.PoseLandmark.LEFT_KNEE, mp_holistic.PoseLandmark.LEFT_ANKLE, mp_holistic.PoseLandmark.LEFT_FOOT_INDEX]
 
@@ -124,22 +128,25 @@ try:
                 small_frame, result.pose_landmarks, mp_pose.POSE_CONNECTIONS
             )
 
+            #発見した関節を保存
             right_detected = {}
             left_detected = {}
 
+
             
             # 各関節の座標を取得して出力
-            right_pixcel = []
+            right_pixcel = {}
             for i in right_number:
                 right = result.pose_landmarks.landmark[i]
 
-                x = right.x * width    # x座標をピクセル単位に変換
-                y = right.y * height   # y座標をピクセル単位に変換
+                x = right.x * small_width    # x座標をピクセル単位に変換
+                y = right.y * small_height   # y座標をピクセル単位に変換
                 z = right.z            # z座標（深度情報）は正規化されている
 
-                right_pixcel = [x, y, z]
+                right_pixcel[i] = [x, y, z]
                 pixel = np.array([x, y, z])
                 point = np.array([right.x, right.y, right.z])
+
                 #右足
                 #26 膝
                 #28 足首
@@ -154,17 +161,19 @@ try:
 
                 print(f"right関節 {i}: x={x:.2f}, y={y:.2f}, z={z:.2f}")
 
-            left_pixel = []
+
+
+            left_pixel = {}
             for i in left_number:
                 left = result.pose_landmarks.landmark[i]
-                x = left.x * width    # x座標をピクセル単位に変換
-                y = left.y * height   # y座標をピクセル単位に変換
+                x = left.x * small_width    # x座標をピクセル単位に変換
+                y = left.y * small_height   # y座標をピクセル単位に変換
                 z = left.z            # z座標（深度情報）は正規化されている
 
                 pixel = np.array([x, y, z])
                 point = np.array([left.x, left.y, left.z])
 
-                left_pixel = [x, y, z]
+                left_pixel[i] = [x, y, z]
 
                 #左足
                 #25 膝
@@ -180,6 +189,7 @@ try:
 
 
             print("right_detedtec[26]")
+
             vec_right_ankle2knee = right_detected[26] - right_detected[28]
             vec_right_ankle2footindex = right_detected[32] - right_detected[28]
             vec_right_knee2hip = right_detected[24] - right_detected[26]
@@ -194,9 +204,9 @@ try:
 
 
             right_angle_ankle = calculate_angle_between_vector(vec_right_ankle2knee, vec_right_ankle2footindex)
-            right_angle_knee = calculate_angle_between_vector(vec_right_ankle2knee, vec_right_ankle2footindex)
-            left_angle_ankle = calculate_angle_between_vector(vec_right_ankle2knee, vec_right_ankle2footindex)
-            left_angle_knee = calculate_angle_between_vector(vec_right_ankle2knee, vec_right_ankle2footindex)
+            right_angle_knee = calculate_angle_between_vector(vec_right_knee2hip, vec_right_knee2ankle)
+            left_angle_ankle = calculate_angle_between_vector(vec_left_ankle2knee, vec_left_ankle2footindex)
+            left_angle_knee = calculate_angle_between_vector()
 
 
             print("angle")
@@ -209,17 +219,51 @@ try:
 
 
 
+            print("right_pixcel")
+            print(right_pixcel)
+
+            text = "x: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0])) + ", " + "y: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])) + ", z: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][2]))
+            text2 = "x: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][0])) + ", " + "y: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][1])) + ", z: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][2]))
+
+            # cv2.putText(small_frame,
+            #     text2,
+            #     org=(0, 50),
+            #     fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            #     fontScale=1.5,
+            #     color=(0, 255, 0),
+            #     thickness=2,
+            #     lineType=cv2.LINE_AA)
 
 
-            text = "x: " + str(int(right_pixcel[0])) + ", " + "y: " + str(int(right_pixcel[1])) + ", z: " + str(int(right_pixcel[2]))
+            # cv2.putText(small_frame,
+            #     text,
+            #     org=(0, 100),
+            #     fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            #     fontScale=1.5,
+            #     color=(0, 255, 0),
+            #     thickness=2,
+            #     lineType=cv2.LINE_AA)
+
             cv2.putText(small_frame,
-                text,
-                org=(200, 50),
+                str(int(right_angle_ankle)),
+                org=(0, 50),
                 fontFace=cv2.FONT_HERSHEY_DUPLEX,
                 fontScale=1.5,
                 color=(0, 255, 0),
                 thickness=2,
                 lineType=cv2.LINE_AA)
+
+
+            cv2.putText(small_frame,
+                str(int(right_angle_knee)),
+                org=(0, 100),
+                fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                fontScale=1.5,
+                color=(0, 255, 0),
+                thickness=2,
+                lineType=cv2.LINE_AA)
+
+            cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), 5, (255, 0, 0), -1)
 
 
 
