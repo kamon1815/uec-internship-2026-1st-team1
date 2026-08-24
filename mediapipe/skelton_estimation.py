@@ -37,7 +37,7 @@ try:
     mp_holistic = mp.solutions.holistic
 
     #サッカーの動画
-    path = r"C:\Users\intern01\Desktop\mysample\videoplayback.mp4"
+    path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\video2.mp4"
 
     # 動画キャプチャの初期化
     # cap = cv2.VideoCapture(0)  # ここではwebカメラ
@@ -206,7 +206,7 @@ try:
             right_angle_ankle = calculate_angle_between_vector(vec_right_ankle2knee, vec_right_ankle2footindex)
             right_angle_knee = calculate_angle_between_vector(vec_right_knee2hip, vec_right_knee2ankle)
             left_angle_ankle = calculate_angle_between_vector(vec_left_ankle2knee, vec_left_ankle2footindex)
-            left_angle_knee = calculate_angle_between_vector()
+            left_angle_knee = calculate_angle_between_vector(vec_left_knee2hip, vec_left_knee2ankle)
 
 
             print("angle")
@@ -262,6 +262,7 @@ try:
                 color=(0, 255, 0),
                 thickness=2,
                 lineType=cv2.LINE_AA)
+
 
             cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), 5, (255, 0, 0), -1)
 
