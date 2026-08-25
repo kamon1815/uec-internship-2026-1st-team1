@@ -99,20 +99,22 @@ try:
         if ball is not None and result.pose_landmarks is not None:
             ball_x,ball_y = ball
             for foot_number in foot_numbers:
+                  #つま先をピクセル座標に変換
                   landmark = result.pose_landmarks.landmark[foot_number]
 
                   foot_x = int(landmark.x * small_width)
                   foot_y = int(landmark.y * small_height)
 
                   cv2.circle(small_frame,(foot_x,foot_y),7,(255,0,0),-1)
-
+                  #ボールとつま先の距離を計算
                   distance = math.sqrt((ball_x - foot_x)**2 + (ball_y - foot_y)**2)
+                  #左右のつま先の近いほうを採用
                   nearest_distance = min(nearest_distance,distance)
 
             if nearest_distance < CONTACT_DISTANCE:
                  contact = True
 
-        #接触したとき
+        #現在のフレームで触れ、前のフレームで触れていないとき
         if contact and not was_contacting:
              contact_count+=1
 
@@ -120,6 +122,7 @@ try:
 
         #接触中
         if contact:
+             #接触した瞬間、contactと表示
              cv2.putText(small_frame,
                          "contact",
                          org=(30,60),
@@ -128,7 +131,7 @@ try:
                          color=(0,255,0),
                          thickness=2,
                          lineType=cv2.LINE_AA)
-             
+        #常に接触回数を表示     
         cv2.putText(small_frame,
                          f"contact count:{contact_count}",
                          org=(30,110),
@@ -169,15 +172,6 @@ try:
                 #32 つま先（人差し指）
                 right_detected[i] = point
                 
-                # print("right_detedted")
-                # print(right_detected)
-
-
-
-                # print(f"right関節 {i}: x={x:.2f}, y={y:.2f}, z={z:.2f}")
-
-
-
             left_pixel = {}
             for i in left_number:
                 left = result.pose_landmarks.landmark[i]
@@ -195,68 +189,7 @@ try:
                 #27 足首
                 #29 かかと
                 #31 つま先（人差し指）
-
                 left_detected[i] = point
-            #     print("left_detedted")
-            #     print(left_detected)
-
-            #     print(f"left関節 {i}: x={x:.2f}, y={y:.2f}, z={z:.2f}")
-
-
-            # print("right_detedtec[26]")
-
-            # vec_right_ankle2knee = right_detected[26] - right_detected[28]
-            # vec_right_ankle2footindex = right_detected[32] - right_detected[28]
-            # vec_right_knee2hip = right_detected[24] - right_detected[26]
-            # vec_right_knee2ankle = right_detected[28] - right_detected[26]
-
-
-            # vec_left_ankle2knee = left_detected[25] - left_detected[27]
-            # vec_left_ankle2footindex = left_detected[31] - left_detected[27]
-            # vec_left_knee2hip = left_detected[23] - left_detected[25]
-            # vec_left_knee2ankle = left_detected[27] - left_detected[25]
-
-
-
-            # right_angle_ankle = calculate_angle_between_vector(vec_right_ankle2knee, vec_right_ankle2footindex)
-            # right_angle_knee = calculate_angle_between_vector(vec_right_knee2hip, vec_right_knee2ankle)
-            # left_angle_ankle = calculate_angle_between_vector(vec_left_ankle2knee, vec_left_ankle2footindex)
-            # left_angle_knee = calculate_angle_between_vector(vec_left_knee2hip, vec_left_knee2ankle)
-
-
-            # print("angle")
-            # print(right_angle_ankle)
-
-            # right_ankle_angles_list.append(right_angle_ankle)
-            # right_knee_angles_list.append(right_angle_knee)
-            # left_ankle_angles_list.append(left_angle_ankle)
-            # left_knee_angles_list.append(left_angle_knee)
-
-            # print("right_pixcel")
-            # print(right_pixcel)
-
-            # text = "x: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0])) + ", " + "y: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])) + ", z: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][2]))
-            # text2 = "x: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][0])) + ", " + "y: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][1])) + ", z: " + str(int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][2]))
-
-            # cv2.putText(small_frame,
-            #     str(int(right_angle_ankle)),
-            #     org=(0, 50),
-            #     fontFace=cv2.FONT_HERSHEY_DUPLEX,
-            #     fontScale=1.5,
-            #     color=(0, 255, 0),
-            #     thickness=2,
-            #     lineType=cv2.LINE_AA)
-
-
-            # cv2.putText(small_frame,
-            #     str(int(right_angle_knee)),
-            #     org=(0, 100),
-            #     fontFace=cv2.FONT_HERSHEY_DUPLEX,
-            #     fontScale=1.5,
-            #     color=(0, 255, 0),
-            #     thickness=2,
-            #     lineType=cv2.LINE_AA)
-
 
             cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), 5, (255, 0, 0), -1)
         # 縮小されたフレームを保存
