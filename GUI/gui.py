@@ -138,6 +138,7 @@ def add_tab(fname):
         for line in lines:
             tframe.text.insert('end',line)
 
+
     fnames.append(fname)
     title=os.path.basename(fname)
 
@@ -145,24 +146,36 @@ def add_tab(fname):
 
 
 
-class Application(tk.Frame):
+
+
+
+   
+
+
+
+
+
+class CamApplication(tk.Frame):
     def __init__(self, master = None):
         super().__init__(master)
         master.title("gui")
         master.geometry("800x600")
 
         self.grid_columnconfigure(0,weight=1)
-        self.grid_columnconfigure(1,weight=0)
-
-        self.grid_rowconfigure(0,weight=3)
-        self.grid_rowconfigure(1,weight=1)
-
-        self.setup_video_widget()
+        self.grid_columnconfigure(1,weight=5)
+        self.grid_rowconfigure(0,weight=1)
 
 
-        self.cam = CameraFactory().create()
-        self.fcreator = None
-        self.decoder = self.cam.decoder()
+        self.left_container = tk.Frame(self)
+        self.left_container.grid(row=0,column=0,sticky = "nsew",padx=5,pady=5)
+
+        self.right_container = tk.Frame(self)
+        self.right_container.grid(row=0,column=1,sticky = "nsew",padx=5,pady=5)
+
+        self.setup_left_side()
+        self.setup_right_side()
+
+
 
         self.framerateStr = tk.IntVar()
         self.resolutionStr = tk.StringVar()
@@ -174,177 +187,73 @@ class Application(tk.Frame):
         self.locker = threading.Lock()
         self.font = tkfont.Font(self,family="Arial",size=10,weight="bold")
 
-        self.createWidget()
+
 
         self.delay = 15
         self.updateID = 0
         self.update()
 
-    def setup_video_widget(self):
-        self.douga = tk.Canvas(self,bg="white")
-        self.douga.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
 
-    def createWidget(self):
+    def setup_left_side(self):
+        self.left_container.grid_columnconfigure(0,weight=1)
+        self.left_container.grid_rowconfigure(0,weight=6)
+        self.left_container.grid_rowconfigure(1,weight=4)
+
+
+        self.canvas = tk.LabelFrame(self.left_container,
+                                    text="grahukari"
+                                                )
+        self.canvas.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
+
+        self.gurahukari_label = tk.Label(self.canvas,text ="takasa")
+        self.gurahukari_label.pack(padx=10,pady=20)
+        
         #---------------------------------------------------
         # takasahantei frame
         #---------------------------------------------------
-        self.takasahanteiFrame = tk.LabelFrame(self,
-                                                text="takasahantei",
-                                                height=200,
-                                                bg = "lightgreen")
+        self.takasahanteiFrame = tk.LabelFrame(self.left_container,
+                                                text="takasahantei"
+                                                )
         self.takasahanteiFrame.grid(row=1,column=0,sticky="nsew",padx=5,pady=5)
 
+        self.takasa_label = tk.Label(self.takasahanteiFrame,text ="takasa")
+        self.takasa_label.pack(padx=10,pady=20)
+
+
+    def setup_right_side(self):
+        self.right_container.grid_columnconfigure(0,weight=1)
+        self.right_container.grid_rowconfigure(0,weight=2)
+        self.right_container.grid_rowconfigure(1,weight=8)
         #---------------------------------------------------
         # siseihantei frame
         #---------------------------------------------------
 
-        self.siseihanteiframe = tk.LabelFrame(self, 
-                                          text="siseihanntei", 
-                                          width=300,
-                                          height=500,
-                                          bg="lightgreen")
-        self.siseihanteiframe.grid(row=0,column=1,sticky="nsew",padx=5,pady=5)
+        self.siseihanteiframe = tk.LabelFrame(self.right_container, 
+                                          text="siseihanntei"
+                                          )
+        self.siseihanteiframe.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
 
         self.sisei_label = tk.Label(self.siseihanteiframe,text="ここにはんていがでる",font=("メイリオ",12))
-        self.sisei_label.pack(padx=10,pady=10)
+        self.sisei_label.pack(padx=10,pady=20)
         
         #---------------------------------------------------
         # gurahu
         #---------------------------------------------------
-        self.gurafuFrame = tk.LabelFrame(self, 
-                                        text="grafu", 
-                                        width=300,
-                                        bg="lightblue")
-        self.gurafuFrame.grid(row=1,column=1,sticky="nsew",padx=5,pady=5)
+        self.gurafuFrame = tk.LabelFrame(self.right_container, 
+                                        text="grafu"
+                                        )
+        self.gurafuFrame.grid(row=1,column=0,sticky="nsew",padx=5,pady=5)
 
         grafu_label=tk.Label(self.gurafuFrame,text = "ここにグラフが表示されます")
         grafu_label.pack(padx=10,pady=10)
 
 
-        #---------------------------------------------------
-        # canvas
-        #---------------------------------------------------
-        self.canvas = tk.Canvas(self, width=1296, height=1080,bg="black")
-        self.canvas.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
+    def draw_image(self,photo):
+        self.canvas.create_image(0,0,image=photo,anchor=tk.NW)
 
 
-
-
-    def update(self):
-        data = self.cam.grab()
-        self.updatecanvas(data)
-        self.updateID = self.after(self.delay, self.update)
-
-    def updatecanvas(self, data):
-        cw = self.canvas.winfo_width()
-        ch = self.canvas.winfo_height()
-        w = data.resolution().width
-        h = data.resolution().height
-        scale = 1
-        if cw > 1 and ch > 1:
-            scale = cw/w if cw/w < ch/h else ch/h
-
-        array = self.decoder.decode(data)
-        i = Image.fromarray(array).resize((int(w*scale), int(h*scale)))
-        self.img = ImageTk.PhotoImage(image=i)
-        self.canvas.delete("all")
-        pos = [(cw-i.width)/2,(ch-i.height)/2]
-        self.canvas.create_image(pos[0], pos[1], anchor="nw", image=self.img)
-        self.canvas.create_text(pos[0]+5, pos[1]+5, anchor="nw", 
-                                text="SequeceNo:" + str(data.sequenceNo()),
-                                font=self.font, fill="limeGreen")
-
-    def updateFramerate(self, e):
-        rate = self.framerateStr.get()
-        self.cam.setFramerateShutter(rate, rate)
-        self.updateResolutionList()
-        self.updateShutterList()
-
-    def updateShutter(self, e):
-        resStr = self.shutterStr.get().split("1/")
-        self.cam.setShutter(int(resStr[1]))
-
-    def updateResolution(self, e):
-        resStr = self.resolutionStr.get().split("x")
-        self.cam.setResolution(int(resStr[0]), int(resStr[1]))
-
-    def updateResolutionList(self):
-        resMax = self.cam.resolutionMax()
-        resLimit = self.cam.resolutionLimit()
-        hStep = resLimit.limitH.step
-        hMin = resLimit.limitH.min
-        hMax = resMax.height
-        wStep = resLimit.limitW.step
-        wMin = resLimit.limitW.min
-        wMax = resMax.width
-
-        resW = range(wMin, wMax+1, wStep if wStep != 0 else 1)
-        resH = range(hMin, hMax+1, hStep if hStep != 0 else 1)
-        resValues = []
-        for h in resH:
-            for w in resW:
-                resValues.append(str(w)+"x"+str(h))
-        res = self.cam.resolution()
-        self.resolutionList.set(str(res.width)+"x"+str(res.height))
-
-    def updateShutterList(self):
-        fps = self.cam.framerate()
-        shutValues = []
-        for s in self.framerateValues:
-               if s >= fps:
-                   shutValues.append("1/" + str(s))
-        self.shutterList.config(values = shutValues)
-        shutter = self.cam.shutter()
-        self.shutterList.set("1/" + str(shutter))
-
-    def updateAcquisition(self):
-        acq = self.acqutionVal.get()
-        if acq and not self.cam.isXferring():
-            self.cam.beginXfer(self.cppCallback)
-        if not acq and self.cam.isXferring():
-            self.cam.endXfer()
-
-    def cppCallback(self, xferData):
-        self.locker.acquire()
-        if self.isRec:
-            self.fcreator.write(xferData)
-        self.locker.release()
-
-    def rec(self):
-        self.locker.acquire()
-        self.isRec = not self.isRec
-        if self.isRec:
-            self.recButton.state(["pressed"])
-            self.fcreator = FileCreator(str(BASE_DIR / "test"), self.savefileVal.get())
-        else:
-            self.recButton.state(["!pressed"])
-            self.fcreator.close()
-            FileCreator.create_json(str(BASE_DIR / "test"), self.cam)
-        self.locker.release()
-
-    def uistop(self):
-        if self.uistopVal.get():
-            self.after_cancel(self.updateID)
-        else:
-            self.updateID = self.after(self.delay, self.update)
-
-    def terminate(self):
-        self.after_cancel(self.updateID)
-        self.cam.close()
-        if self.fcreator is not None:
-            self.fcreator.close()
-
-    def resetSequenceNo(self):
-        self.cam.resetSequenceNo()
-
-    def resetDevice(self):
-        self.locker.acquire()
-        self.cam.resetDevice()
-        self.cam = CameraFactory().create()
-        self.framerateList.set(self.cam.framerate())
-        self.updateResolutionList()
-        self.updateShutterList()
-        self.locker.release()
+    
+    
 
 
 class FileApplication(tk.Frame):
@@ -463,13 +372,27 @@ class FileApplication(tk.Frame):
 class SetApplication(tk.Frame):
     def __init__(self, master = None):
         super().__init__(master)
-        master.title("gui_sample")
-        master.geometry("800x600")
-        self.pack(expand=1, fill=tk.BOTH, anchor=tk.NW)
+
+
+
+        self.cam_window = tk.Toplevel(self)
+        self.cam_window.title("camera")
+        self.cam_window.geometry("800x600")
 
         self.cam = CameraFactory().create()
         self.fcreator = None
         self.decoder = self.cam.decoder()
+
+        self.canvas = tk.Canvas(self.cam_window)
+        self.canvas.pack(fill = tk.BOTH,expand=True)
+
+        master.title("gui_sample")
+        master.geometry("800x600")
+        self.pack(expand=1, fill=tk.BOTH, anchor=tk.NW)
+
+
+
+
 
         self.framerateValues = [1, 10, 50, 100, 125, 250, 500, 950, 1000, 
                                 1500, 2000, 2500, 3000, 3200, 4000, 5000, 
@@ -795,16 +718,18 @@ def main():
     notebook = ttk.Notebook(root)
     notebook.pack(fill='both',expand=1)
 
-    app = Application(master = root)
-    notebook.add(app, text="cam")
+
+
+    camapp = CamApplication(master = root)
+    notebook.add(camapp, text="cam")
     fileapp = FileApplication(master = root)
     notebook.add(fileapp, text="file")
     setapp = SetApplication(master = root)
     notebook.add(setapp,text="set")
    
 
-    app.mainloop()
-    app.terminate()
+    setapp.mainloop()
+    setapp.terminate()
 
 if __name__ == '__main__':
     main()
