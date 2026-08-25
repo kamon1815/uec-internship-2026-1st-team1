@@ -1,4 +1,4 @@
-#角度をグラフ表示する、リアルタイムで更新する
+#角度をグラフ表示する、リアルタイムで更新するサンプル
 import matplotlib.pyplot as plt
 import numpy as np
 

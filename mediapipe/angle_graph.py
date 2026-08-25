@@ -1,4 +1,6 @@
-#角度をグラフ表示する
+#角度をグラフ表示するサンプル
+
+
 import matplotlib.pyplot as plt
 import numpy as np
 
