@@ -372,6 +372,9 @@ class FileApplication(tk.Frame):
 class SetApplication(tk.Frame):
     def __init__(self, master = None):
         super().__init__(master)
+        master.title("gui_sample")
+        master.geometry("800x600")
+        self.pack(expand=1, fill=tk.BOTH, anchor=tk.NW)
 
 
 
@@ -383,16 +386,9 @@ class SetApplication(tk.Frame):
         self.fcreator = None
         self.decoder = self.cam.decoder()
 
+
         self.canvas = tk.Canvas(self.cam_window)
         self.canvas.pack(fill = tk.BOTH,expand=True)
-
-        master.title("gui_sample")
-        master.geometry("800x600")
-        self.pack(expand=1, fill=tk.BOTH, anchor=tk.NW)
-
-
-
-
 
         self.framerateValues = [1, 10, 50, 100, 125, 250, 500, 950, 1000, 
                                 1500, 2000, 2500, 3000, 3200, 4000, 5000, 
@@ -609,6 +605,8 @@ class SetApplication(tk.Frame):
         self.img = ImageTk.PhotoImage(image=i)
         self.canvas.delete("all")
         pos = [(cw-i.width)/2,(ch-i.height)/2]
+
+        # 
         self.canvas.create_image(pos[0], pos[1], anchor="nw", image=self.img)
         self.canvas.create_text(pos[0]+5, pos[1]+5, anchor="nw", 
                                 text="SequeceNo:" + str(data.sequenceNo()),
