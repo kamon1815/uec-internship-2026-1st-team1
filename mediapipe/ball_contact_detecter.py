@@ -3,6 +3,7 @@ from ultralytics import YOLO
 import mediapipe as mp
 import numpy as np
 import math
+from pathlib import Path
 
 model = YOLO("yolov8n.pt") 
 #接触と判定する距離
@@ -18,7 +19,9 @@ try:
     mp_holistic = mp.solutions.holistic
 
     #サッカーの動画
-    path = "C:\\Users\\intern02\\Desktop\\GitHub\\uec-internship-2026-1st-team1\\video2.mp4"
+    BASE_DIR = Path(__file__).resolve().parent
+    #path = "C:\\Users\\intern02\\Desktop\\GitHub\\uec-internship-2026-1st-team1\\video2.mp4"
+    path = BASE_DIR / "../movie/zikken3.avi"
 
     # 動画キャプチャの初期化
     # cap = cv2.VideoCapture(0)  # ここではwebカメラ
