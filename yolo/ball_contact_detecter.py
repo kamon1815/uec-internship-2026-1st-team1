@@ -62,8 +62,8 @@ try:
 
         small_height, small_width, _ = small_frame.shape
 
-        print("small_size")
-        print(small_height, small_width)
+        # print("small_size")
+        # print(small_height, small_width)
 
         nearest_distance = float("inf")
         results = model(small_frame)
