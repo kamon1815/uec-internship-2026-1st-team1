@@ -7,135 +7,124 @@ import mediapipe as mp
 
 BASE_DIR = Path(__file__).resolve().parent
 path = BASE_DIR / "../movie/zikken3.avi"
-model = YOLO("yolov8n.pt")
-mp_pose = mp.solutions.pose
-pose = mp_pose.Pose()
-mp_drawing = mp.solutions.drawing_utils
-mp_holistic = mp.solutions.holistic
 
-class YOLO:
+class BallDetecter:
 
-    def __init__(self,model,frame):
-        self.frame = frame
-        self.model = model
-
-    def detect_ball(frame):
-        results = model(frame)
+    def __init__(self):
+         self.model = YOLO("yolov8n.pt")
+    
+    def detect(self,frame):
+        results = self.model(frame)
         boxes = results[0].boxes
         
         for box in boxes:
             cls_id = int(box.cls[0])
-            if model.names[cls_id] == "sports ball":
+            if self.model.names[cls_id] == "sports ball":
                 x1,y1,x2,y2 = box.xyxy[0].tolist()
                 cx = (x1+x2)/2
                 cy = (y1+y2)/2
                 #print(f"中心座標:({cx},{cy})")
-                cv2.rectangle(frame, (int(x1), int(y1) ), (int(x2), int(y2)), (0,0,255), 2)
-                cv2.circle(frame, (int(cx),int(cy)), 5,(0,0,255), -1)
-
-    def contact_judgement(detect_ball_frame,mediapipe_frame,ball,):
-        foot_numbers = [ mp_holistic.PoseLandmark.RIGHT_FOOT_INDEX, mp_holistic.PoseLandmark.LEFT_FOOT_INDEX]
-        ball_x,ball_y = ball
-        for foot_number in foot_numbers:
-            #つま先をピクセル座標に変換
-            landmark = mediapipe_frame.pose_landmarks.landmark[foot_number]
-         
-            foot_x = int(landmark.x * small_width)
-            foot_y = int(landmark.y * small_height)
-         
-            cv2.circle(frame,(foot_x,foot_y),7,(255,0,0),-1)
-            #ボールとつま先の距離を計算
-            distance = math.sqrt((ball_x - foot_x)**2 + (ball_y - foot_y)**2)
-            #左右のつま先の近いほうを採用
-            nearest_distance = min(nearest_distance,distance)
-         
-        if nearest_distance < CONTACT_DISTANCE:
-            contact = True
-         
-        #現在のフレームで触れ、前のフレームで触れていないとき
-        if contact and not was_contacting:
-            contact_count+=1
-         
-        was_contacting = contact
-         
-        #接触中
-        if contact:
-            #接触した瞬間、contactと表示
-            cv2.putText(frame,
-                        "contact",
-                        org=(30,60),
-                        fontFace=cv2.FONT_HERSHEY_DUPLEX,
-                        fontScale=1.5,
-                        color=(0,255,0),
-                        thickness=2,
-                        lineType=cv2.LINE_AA)
-        #常に接触回数を表示     
-        cv2.putText(frame,
-                    f"contact count:{contact_count}",
-                    org=(30,110),
-                    fontFace=cv2.FONT_HERSHEY_DUPLEX,
-                    fontScale=0.7,
-                    color=(0,255,0),
-                    thickness=2,
-                    lineType=cv2.LINE_AA)             
-         
-
-class mediapipe:
+                ball_x = (cx),ball_y = int(y2)
+                return (ball_x,ball_y),(x1,y1,x2,y2)
+                # cv2.rectangle(frame, (int(x1), int(y1) ), (int(x2), int(y2)), (0,0,255), 2)
+                # cv2.circle(frame, (int(cx),int(cy)), 5,(0,0,255), -1)
+                      
+class PoseDetecter:
     def __init__(self):
-        right_ankle_angles_list = []
-        right_knee_angles_list = []
-        left_ankle_angles_list = []
-        left_knee_angles_list = []
+        self.mp_pose = mp.solutions.pose
+        self.pose = self.mp_pose.Pose()
+        self.mp_drawing = mp.solutions.drawing_utils
+        self.mp_holistic = mp.solutions.holistic
         
 
-    def calculate_angle_between_vector(v1, v2):
-        v1 = np.array(v1)
-        v2 = np.array(v2)
+    def detect_toes(self,frame):
+         frame_rgb = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+         result = self.pose.process(frame_rgb)
 
-        # 単位ベクトル化
-        v1_unit = v1 / (np.linalg.norm(v1) + 1e-6)
-        v2_unit = v2 / (np.linalg.norm(v2) + 1e-6)
-        
-        # 内積と外積
-        dot = np.dot(v1_unit, v2_unit)
-        cross = v1_unit[0] * v2_unit[1] - v1_unit[1] * v2_unit[0]  # 2D外積（z成分のみ）
+         toe_positions = []
 
-        # atan2を使えば符号付きで角度が出せる！（-π〜+π）
-        angle_rad = np.arctan2(cross, dot)
-        angle_deg = np.degrees(angle_rad)
-        
-        # 常に 0〜360度に変換
-        if angle_deg < 0:
-            angle_deg += 360
+         if result.pose_landmarks:
+              height,width, _ = frame.shape
+              toe_numbers = [
+                   self.mp_pose.PoseLandmark.RIGHT_FOOT_INDEX,
+                   self.mp_pose.PoseLandmark.LEFT_FOOT_INDEX
+              ]
 
-        #足首などの角度は基本180度を超えることはないので、180以下へと変更する
-        if angle_deg > 180:
-            angle_deg = 360 - angle_deg
+              for toe_number in toe_numbers:
+                   landmark = result.pose_landmarks.landmark[toe_number.value]
 
-        return angle_deg
+                   toe_x = int(landmark.x * width)
+                   toe_y = int(landmark.y * height)
 
+                   toe_positions.append((toe_x,toe_y))
 
-    def skeleton_detection(frame):
-        ret, frame = cap.read()
-        if not ret:
-                 print("Error: フレームを取得できませんでした。")
-                 break
-        
-        # フレームの高さと幅を取得
-        height, width, _ = frame.shape
-        
-        # フレームサイズを縮小
-        small_frame = cv2.resize(frame, (int(width * resize_scale), int(height * resize_scale)))
-        
-        small_height, small_width, _ = small_frame.shape
-        
-                # print("small_size")
-                # print(small_height, small_width)
-        
-                nearest_distance = float("inf")
-                results = model(small_frame)
-                boxes = results[0].boxes
+              self.mp_drawing.draw_landmarks(
+                   frame,
+                   result.pose_landmarks,
+                   self.mp_pose.POSE_CONNECTIONS
+              )
 
+         return toe_positions
+
+    def nose_height(self,frame):
+        frame_rgb = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+        result = self.pose.process(frame_rgb)
+
+        if result.pose_landmarks:
+            height,width, _ = frame.shape
+            landmark = result.pose_landmarks.landmark[self.mp_pose.PoseLandmark.NOSE]
+
+            nose_potision = int(landmark.y * height)
+
+            self.mp_drawing_landmarks(
+                frame,
+                result.pose_landmarks,
+                self.mp_pose.POSE_CONNECTIONS
+            )
+
+        return nose_potision
     
+    def close(self):
+         self.pose.close()
+
+class ContactCounter:
+    def __init__(self,contact_distance=60):
+        self.contact_distance = contact_distance
+        self.contact_count = 0
+        self.was_contacting = False
+
+    def update(self, ball_position, toe_potisions):
+        contact = False
+        nearest_distance = float("inf")
+
+        if ball_position is not None:
+            ball_x,ball_y = ball_position
+
+            for toe_x, toe_y in toe_potisions:
+                distance = math.sqrt((ball_x - toe_x) ** 2 + (ball_y - toe_y) ** 2)
+                nearest_distance = min(nearest_distance,distance)
+
+            if nearest_distance < self.contact_distance:
+                contact = True
+
+        if contact and not self.was_contacting:
+            self.contact_count += 1
+
+        self.was_contacting = contact
+
+        return contact,nearest_distance
+
+class BallHeightDetecter:
+    def __init__(self):
+        pass
+
+    def update(self,ball_position, nose_height):
+        if ball_position is not None:
+            ball_x,ball_y = ball_position
+
+            if nose_height - ball_y > 0:
+                return True
+
+        return False
 
     
