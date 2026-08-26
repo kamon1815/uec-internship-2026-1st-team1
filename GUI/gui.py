@@ -12,6 +12,9 @@ from enum import IntEnum
 import pypuclib
 from pypuclib import CameraFactory, Camera, XferData, Resolution, Decoder
 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 BASE_DIR = Path(__file__).resolve().parent
 
 class FILE_TYPE(IntEnum):
@@ -149,7 +152,7 @@ def add_tab(fname):
 
 
 
-   
+#CamApplicatonとfileApplicationがGUIの表示される部分
 
 
 
@@ -161,25 +164,25 @@ class CamApplication(tk.Frame):
         master.title("gui")
         master.geometry("800x600")
 
-
+        #ウィンドウの作成
         self.cam_window = tk.Toplevel(self)
         self.cam_window.title("camera")
         self.cam_window.geometry("800x600")
-
+        #カメラの画面生成
         self.cam = CameraFactory().create()
         self.fcreator = None
         self.decoder = self.cam.decoder()
+        #canvasの作成、変数名をcanvasにすると下の方で生成してるcanvasとかぶる
+        self.canvas_window = tk.Canvas(self.cam_window)
+        self.canvas_window.pack(fill = tk.BOTH,expand=True)
 
 
-        self.canvasw = tk.Canvas(self.cam_window)
-        self.canvasw.pack(fill = tk.BOTH,expand=True)
-
-
-        
+        #フレームレートで選択できる値
         self.framerateValues = [1, 10, 50, 100, 125, 250, 500, 950, 1000, 
                                         1500, 2000, 2500, 3000, 3200, 4000, 5000, 
                                         8000, 10000, 20000, 25000, 30000]
 
+        
         self.framerateStr = tk.IntVar()
         self.resolutionStr = tk.StringVar()
         self.shutterStr = tk.StringVar()
@@ -189,27 +192,24 @@ class CamApplication(tk.Frame):
         self.isRec = False
         self.locker = threading.Lock()
         self.font = tkfont.Font(self,family="Arial",size=10,weight="bold")
-        
 
+        #gridを用いて画面作成
+        #画面を左右に分けている
+        #weightで余白ができた際の比率をきめてるいまは20:1
         self.grid_columnconfigure(0,weight=20)
         self.grid_columnconfigure(1,weight=1)
         self.grid_rowconfigure(0,weight=1)
 
-
         self.left_container = ttk.Frame(self)
         self.left_container.grid(row=0,column=0,sticky = "nsew",padx=5,pady=5)
-
         self.right_container = ttk.Frame(self)
         self.right_container.grid(row=0,column=1,sticky = "nsew",padx=5,pady=5)
+
 
         self.setup_left_side()
         self.setup_right_side()
 
-        #self.createWidget()
-
-
-
-
+        self.create_graph()
 
 
         self.delay = 15
@@ -217,50 +217,58 @@ class CamApplication(tk.Frame):
         self.update()
 
 
+    #左側の作成
     def setup_left_side(self):
+        #まず左側を上下に分割、余白ができた際の比率を8:2に設定
         self.left_container.grid_columnconfigure(0,weight=1)
         self.left_container.grid_rowconfigure(0,weight=8)
         self.left_container.grid_rowconfigure(1,weight=2)
 
 
-        self.canvas = ttk.LabelFrame(self.left_container,
-                                    text="grahukari"
-                                                )
-        self.canvas.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
+        #----------------------------------------------
+        #graphの生成
+        #---------------------------------------------
 
-        self.gurahukari_label = ttk.Label(self.canvas,text ="takasa")
-        self.gurahukari_label.pack(padx=10,pady=20)
+        self.graph = ttk.LabelFrame(self.left_container,
+                                    text="graph"
+                                     )
+
+        self.graph.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
+
+        #self.graph_label = ttk.Label(self.canvas,text ="グラフの作成")
+        #self.graph_label.pack(padx=10,pady=20)
         
         #---------------------------------------------------
-        # takasahantei frame
+        # 高さ判定のフレームの作成
         #---------------------------------------------------
-        self.takasahanteiFrame = ttk.LabelFrame(self.left_container,
-                                                text="takasahantei"
+        self.height_judge_Frame = ttk.LabelFrame(self.left_container,
+                                                text="height"
                                                 )
-        self.takasahanteiFrame.grid(row=1,column=0,sticky="nsew",padx=5,pady=5)
+        self.height_judge_Frame.grid(row=1,column=0,sticky="nsew",padx=5,pady=5)
 
-        self.takasa_label = ttk.Label(self.takasahanteiFrame,text ="takasa")
-        self.takasa_label.pack(padx=10,pady=20)
+        self.height_judge_label = ttk.Label(self.height_judge_Frame,text ="高さ判定の結果を表示する")
+        self.height_judge_label.pack(padx=10,pady=20)
 
-
+    #右側の作成
     def setup_right_side(self):
+        #まず上下に分割、余白の比率は2:8
         self.right_container.grid_columnconfigure(0,weight=1)
         self.right_container.grid_rowconfigure(0,weight=2)
         self.right_container.grid_rowconfigure(1,weight=8)
         #---------------------------------------------------
-        # siseihantei frame
+        # 姿勢判定の表示を行う
         #---------------------------------------------------
 
-        self.siseihanteiframe = ttk.LabelFrame(self.right_container, 
-                                          text="siseihanntei"
+        self.posture_judge_frame = ttk.LabelFrame(self.right_container, 
+                                          text="sisei"
                                           )
-        self.siseihanteiframe.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
+        self.posture_judge_frame.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
 
-        self.sisei_label = ttk.Label(self.siseihanteiframe,text="ここにはんていがでる",font=("メイリオ",12))
-        self.sisei_label.pack(padx=10,pady=20)
+        self.posture_judge_label = ttk.Label(self.posture_judge_frame,text="姿勢判定の結果を表示する",font=("メイリオ",12))
+        self.posture_judge_label.pack(padx=10,pady=20)
         
         #---------------------------------------------------
-        # gurahu
+        # 設定ボタンの配置
         #---------------------------------------------------
         self.setframe = ttk.LabelFrame(self.right_container, 
                                         text="set"
@@ -269,12 +277,16 @@ class CamApplication(tk.Frame):
 
         self.setframe.grid_rowconfigure(0,weight=1)
 
+        #設定用の場所を10分割
+
         for i in range(10):
             self.setframe.grid_rowconfigure(i,weight=2,)
 
+        #各種ボタンを配置rowとcolumnで行列の場所を決定している
 
-
-#
+        #-----------------------------------------------------
+        #framerate
+        #-----------------------------------------------------
             
         self.framerateLabel = ttk.Label(self.setframe,text="Framerate[fps]", width=20)
         self.framerateLabel.grid(row=0,column=0,sticky="news",padx=5, pady=5)
@@ -285,7 +297,9 @@ class CamApplication(tk.Frame):
         self.framerateList.grid(row=0,column=1,sticky="news",padx=5, pady=5)
         self.framerateList.bind("<<ComboboxSelected>>", self.updateFramerate)
 
-        #
+        #---------------------------------------------------
+        # shutter
+        #---------------------------------------------------
             
 
         self.shutterLabel = ttk.Label(self.setframe,text="Shutter speed[sec]", width=20)
@@ -297,7 +311,10 @@ class CamApplication(tk.Frame):
         self.shutterList.bind("<<ComboboxSelected>>", self.updateShutter)
 
 
-        #
+        #---------------------------------------------------
+        # resolution
+        #---------------------------------------------------
+
         self.resolutionLabel = ttk.Label(self.setframe,text="Resolution[pixel]", width=20)
         self.resolutionLabel.grid(row=2,column=0,sticky="news",padx=5, pady=5)
         
@@ -307,7 +324,10 @@ class CamApplication(tk.Frame):
         self.resolutionList.bind("<<ComboboxSelected>>", self.updateResolution)
 
 
-        #
+        #---------------------------------------------------
+        # Acquisition mode
+        #---------------------------------------------------
+
         self.acqusitionLabel = ttk.Label(self.setframe,text="Acquisition mode", width=18)
         self.acqusitionLabel.grid(row=3,column=0,sticky="news",padx=5, pady=5)
     
@@ -324,8 +344,10 @@ class CamApplication(tk.Frame):
         self.acqusition1.grid(row=3,column=1,sticky="news",padx=5, pady=5)
         self.acqutsiion2.grid(row=4,column=1,sticky="news",padx=5, pady=5)
 
-#
 
+        #---------------------------------------------------
+        # savefiles
+        #---------------------------------------------------
 
         self.savefilesLabel = ttk.Label(self.setframe,text="Save file", width=18)
         self.savefilesLabel.grid(row=5,column=0,sticky="news",padx=5, pady=5)
@@ -342,7 +364,10 @@ class CamApplication(tk.Frame):
         self.savefile_bin.grid(row=6,column=1,sticky="news",padx=5, pady=5)
 
 
-#
+        #---------------------------------------------------
+        # record button
+        #---------------------------------------------------
+
         self.recButton = ttk.Button(self.setframe, 
                                     text = "REC", 
                                     command=self.rec,
@@ -358,196 +383,18 @@ class CamApplication(tk.Frame):
                                          text = "Reset Seq No",
                                          command = self.resetSequenceNo,
                                          width = 30)
-        self.resetSeqButton.grid(row=8,column=1,sticky="news",padx=5, pady=5)      
+        self.resetSeqButton.grid(row=8,column=0,sticky="news",padx=5, pady=5)      
 
 
-
-#
-
-
+        #---------------------------------------------------
+        # reset button
+        #---------------------------------------------------
         self.resetButton = ttk.Button(self.setframe, 
                                     text = "RESET", 
                                     command=self.resetDevice,
                                     width=15)
         self.resetButton.grid(row=9,column=0,sticky="news",padx=5, pady=5)   
 
-
-
-        #grafu_label=tk.Label(self.gurafuFrame)
-        #grafu_label.pack(padx=10,pady=10)
-        #self.createWidget()
-
-    def draw_image(self,photo):
-        self.canvas.create_image(0,0,image=photo,anchor=tk.NW)
-
-
-    def createWidget(self):
-        #---------------------------------------------------
-        # options frame
-        #---------------------------------------------------
-  
-        #self.optionFrame = ttk.LabelFrame(self, 
-                                       #   text="options", 
-                                        #  width=frameWidth,
-                                      #    relief=tk.RAISED)
-        #self.optionFrame.propagate(False)
-        #self.optionFrame.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
-
-        #---------------------------------------------------
-        # framerate
-        #---------------------------------------------------
-        self.frameratePanel = ttk.Frame(self.gurafuFrame,
-                                        #width=frameWidth,
-                                        height=30,
-                                        relief=tk.FLAT)
-        self.frameratePanel.propagate(False)
-        self.frameratePanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
-
-        self.framerateLabel = ttk.Label(self.frameratePanel,text="Framerate[fps]", width=20)
-        self.framerateLabel.pack(side=tk.LEFT, padx=5)
-
-        self.framerateList = ttk.Combobox(self.frameratePanel, 
-                                          values=self.framerateValues, 
-                                          textvariable=self.framerateStr)
-        self.framerateList.pack(side=tk.LEFT, padx=5)
-        self.framerateList.bind("<<ComboboxSelected>>", self.updateFramerate)
-
-        #---------------------------------------------------
-        # shutter
-        #---------------------------------------------------
-        self.shutterPanel = ttk.Frame(self.gurafuFrame,
-                                      #width=frameWidth,
-                                      height=30,
-                                      relief=tk.FLAT)
-        self.shutterPanel.propagate(False)
-        self.shutterPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
-
-        self.shutterLabel = ttk.Label(self.shutterPanel,text="Shutter speed[sec]", width=20)
-        self.shutterLabel.pack(side=tk.LEFT, padx=5)
-
-        self.shutterList = ttk.Combobox(self.shutterPanel,  
-                                        textvariable=self.shutterStr)
-        self.shutterList.pack(side=tk.LEFT, padx=5)
-        self.shutterList.bind("<<ComboboxSelected>>", self.updateShutter)
-
-        #---------------------------------------------------
-        # resolution
-        #---------------------------------------------------
-        self.resolutionPanel = ttk.Frame(self.gurafuFrame,
-                                         #width=frameWidth,
-                                         height=30,
-                                         relief=tk.FLAT)
-        self.resolutionPanel.propagate(False)
-        self.resolutionPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
-
-        self.resolutionLabel = ttk.Label(self.resolutionPanel,text="Resolution[pixel]", width=20)
-        self.resolutionLabel.pack(side=tk.LEFT, padx=5)
-
-        self.resolutionList = ttk.Combobox(self.resolutionPanel,  
-                                           textvariable=self.resolutionStr)
-        self.resolutionList.pack(side=tk.LEFT, padx=5)
-        self.resolutionList.bind("<<ComboboxSelected>>", self.updateResolution)
-
-        #---------------------------------------------------
-        # Acquisition mode
-        #---------------------------------------------------
-        self.acquisitionPanel = ttk.Frame(self.gurafuFrame,
-                                          #width=frameWidth,
-                                          height=30,
-                                          relief=tk.FLAT)
-        self.acquisitionPanel.propagate(False)
-        self.acquisitionPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
-
-        self.acqusitionLabel = ttk.Label(self.acquisitionPanel,text="Acquisition mode", width=18)
-        self.acqusitionLabel.pack(side=tk.LEFT, padx=5)
-
-        self.acqusition1 = tk.Radiobutton(self.acquisitionPanel,
-                                          text="single",
-                                          value=0,
-                                          variable=self.acqutionVal,
-                                          command=self.updateAcquisition)
-        self.acqutsiion2 = tk.Radiobutton(self.acquisitionPanel,
-                                          text="continuous",
-                                          value=1,
-                                          variable=self.acqutionVal,
-                                          command=self.updateAcquisition)
-        self.acqusition1.pack(side=tk.LEFT, padx = 5)
-        self.acqutsiion2.pack(side=tk.LEFT, padx = 5)
-
-        #---------------------------------------------------
-        # savefiles
-        #---------------------------------------------------
-        self.savefilesPanel = ttk.Frame(self.gurafuFrame,
-                                        #width=frameWidth,
-                                        height=30,
-                                        relief=tk.FLAT)
-        self.savefilesPanel.propagate(False)
-        self.savefilesPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
-
-        self.savefilesLabel = ttk.Label(self.savefilesPanel,text="Save file", width=18)
-        self.savefilesLabel.pack(side=tk.LEFT, padx=5)
-
-        self.savefile_csv = tk.Radiobutton(self.savefilesPanel,
-                                           text="csv",
-                                           value=FILE_TYPE.CSV.value,
-                                           variable=self.savefileVal)
-        self.savefile_bin = tk.Radiobutton(self.savefilesPanel,
-                                           text="binary",
-                                           value=FILE_TYPE.BINARY.value,
-                                           variable=self.savefileVal,)
-        self.savefile_csv.pack(side=tk.LEFT, padx = 5)
-        self.savefile_bin.pack(side=tk.LEFT, padx = 5)
-
-
-        #---------------------------------------------------
-        # record button
-        #---------------------------------------------------
-        self.recPanel = ttk.Frame(self.gurafuFrame,
-                                  #width=frameWidth,
-                                  height=30,
-                                  relief=tk.FLAT)
-        self.recPanel.propagate(False)
-        self.recPanel.pack(side=tk.BOTTOM, fill=tk.Y, padx=5, pady=5)
-        self.recButton = ttk.Button(self.recPanel, 
-                                    text = "REC", 
-                                    command=self.rec,
-                                    width=15)
-        self.recButton.pack(side=tk.RIGHT,anchor="center", expand=True)
-        self.uistopCheck = ttk.Checkbutton(self.recPanel,
-                                           text="Stop Live",
-                                           variable=self.uistopVal,
-                                           command=self.uistop)
-        self.uistopCheck.pack(side=tk.RIGHT,anchor="center", expand=True)
-
-        self.resetSeqButton = ttk.Button(self.recPanel,
-                                         text = "Reset Seq No",
-                                         command = self.resetSequenceNo,
-                                         width = 30)
-        self.resetSeqButton.pack(side=tk.RIGHT, anchor = "center", expand = True)
-
-
-        #---------------------------------------------------
-        # reset button
-        #---------------------------------------------------
-        self.resetPanel = ttk.Frame(self.gurafuFrame,
-                                 # width=frameWidth,
-                                  height=30,
-                                  relief=tk.FLAT)
-        self.resetPanel.propagate(False)
-        self.resetPanel.pack(side=tk.BOTTOM, fill=tk.Y, padx=5, pady=5)
-        self.resetButton = ttk.Button(self.resetPanel, 
-                                    text = "RESET", 
-                                    command=self.resetDevice,
-                                    width=15)
-        self.resetButton.pack(side=tk.RIGHT,anchor="sw", expand=True)
-
-
-
-        #---------------------------------------------------
-        # canvas
-        #---------------------------------------------------
-        #self.canvas = tk.Canvas(self, width=1296, height=1080)
-        #self.canvas.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         #---------------------------------------------------
         # initialize ui
@@ -557,14 +404,20 @@ class CamApplication(tk.Frame):
         self.updateShutterList()
         self.updateAcquisition()
 
+
+
+    def draw_image(self,photo):
+        self.canvas.create_image(0,0,image=photo,anchor=tk.NW)
+
+
     def update(self):
         data = self.cam.grab()
         self.updatecanvas(data)
         self.updateID = self.after(self.delay, self.update)
 
     def updatecanvas(self, data):
-        cw = self.canvasw.winfo_width()
-        ch = self.canvasw.winfo_height()
+        cw = self.canvas_window.winfo_width()
+        ch = self.canvas_window.winfo_height()
         w = data.resolution().width
         h = data.resolution().height
         scale = 1
@@ -574,12 +427,12 @@ class CamApplication(tk.Frame):
         array = self.decoder.decode(data)
         i = Image.fromarray(array).resize((int(w*scale), int(h*scale)))
         self.img = ImageTk.PhotoImage(image=i)
-        self.canvasw.delete("all")
+        self.canvas_window.delete("all")
         pos = [(cw-i.width)/2,(ch-i.height)/2]
 
-        # 
-        self.canvasw.create_image(pos[0], pos[1], anchor="nw", image=self.img)
-        self.canvasw.create_text(pos[0]+5, pos[1]+5, anchor="nw", 
+        
+        self.canvas_window.create_image(pos[0], pos[1], anchor="nw", image=self.img)
+        self.canvas_window.create_text(pos[0]+5, pos[1]+5, anchor="nw", 
                                 text="SequeceNo:" + str(data.sequenceNo()),
                                 font=self.font, fill="limeGreen")
 
@@ -675,6 +528,25 @@ class CamApplication(tk.Frame):
         self.updateResolutionList()
         self.updateShutterList()
         self.locker.release()
+
+
+        #グラフの情報
+    def create_graph(self):
+        fig,ax = plt.subplots(figsize=(4,3),dpi=100)
+
+        x=[1,2,3,4,5]
+        y=[2,3,5,7,11]
+        ax.plot(x,y,marker="o",color="blue",label="de-ta")
+        ax.set_title("sanpul")
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.legend()
+        ax.grid(True)
+
+        self.canvas_g = FigureCanvasTkAgg(fig,master=self.graph)
+        self.canvas_g.draw()
+        self.canvas_g.get_tk_widget().pack(fill=tk.BOTH,expand=True)
+
 
 
     
@@ -813,8 +685,7 @@ def main():
     notebook.add(camapp, text="cam")
     fileapp = FileApplication(master = root)
     notebook.add(fileapp, text="file")
-    #setapp = SetApplication(master = root)
-    #notebook.add(setapp,text="set")
+
    
 
     camapp.mainloop()
