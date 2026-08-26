@@ -58,8 +58,8 @@ class PoseAnalyzer:
         self.left_knee_angles_list = []
 
         #取得したい関節の番号
-        right_joint_num = [self.RIGHT_HIP, self.RIGHT_KNEE, self.RIGHT_ANKLE, self.RIGHT_FOOT_INDEX]
-        left_joint_num = [self.LEFT_HIP, self.LEFT_KNEE, self.LEFT_ANKLE, self.LEFT_FOOT_INDEX]
+        self.right_joint_num = [self.RIGHT_HIP, self.RIGHT_KNEE, self.RIGHT_ANKLE, self.RIGHT_FOOT_INDEX]
+        self.left_joint_num = [self.LEFT_HIP, self.LEFT_KNEE, self.LEFT_ANKLE, self.LEFT_FOOT_INDEX]
 
 
 
@@ -163,7 +163,7 @@ class PoseAnalyzer:
 
         return angle_deg
 
-    #角度を取得したい関節名を入れると、その関節角度が返る
+    #角度を取得したい関節名（番号）を入れると、その関節角度が返る
     #入力：取得したい角度のナンバー（RIGHT_ANKLE = 28なら、右足の足首の角度を計測）、関節のピクセル座標を保存する辞書
     def calc_joint_angles(self, joint_num, joint_pixcels):
 
@@ -193,8 +193,8 @@ class PoseAnalyzer:
         
 
         #選んだ番号の関数の座標を取得
-        r_joint_pixcels, r_joint_data = self.get_selectecd_landmarks(frame, frame)
-        l_joint_pixcels, l_joint_data = self.get_selectecd_landmarks(frame, frame)
+        r_joint_pixcels, r_joint_data = self.get_selectecd_landmarks(frame, self.right_joint_num)
+        l_joint_pixcels, l_joint_data = self.get_selectecd_landmarks(frame, self.left_joint_num)
 
         #関節角度の計算
         angle_r_ankle = self.calc_joint_angles(self.RIGHT_ANKLE, r_joint_pixcels)
@@ -219,9 +219,21 @@ class PoseAnalyzer:
         self.last_frame_num += 1
 
 
-        result = 
+        return {
+            "right_ankle_angles_list": self.right_ankle_angles_list,
+            "right_knee_angles_list": self.right_knee_angles_list,
+            "left_ankle_angles_list": self.left_ankle_angles_list,
+            "left_knee_angles_list": self.left_knee_angles_list,
+            "right_ankle_angles_traj": self.right_ankle_angles_traj,
+            "right_knee_angles_traj": self.right_knee_angles_traj,
+            "left_ankle_angles_traj": self.left_ankle_angles_traj,
+            "left_knee_angles_traj": self.left_knee_angles_traj,
+            "first_frame_num": self.first_frame_num,
+            "last_frame_num": self.last_frame_num,
+            "r_joint_pixcels": r_joint_pixcels,
+            "l_joint_pixcels": l_joint_pixcels
 
-        return result
+        }
 
 
             
@@ -251,6 +263,10 @@ def main():
 
     cap = cv2.VideoCapture(path)
 
+    if not cap.isOpened():
+        print("Error: カメラまたは動画を開けませんでした。")
+        exit()
+
     #リサイズの大きさも統合するためにクラスの外で行う
     resize_scale = 0.7
 
@@ -264,7 +280,6 @@ def main():
     out = cv2.VideoWriter(output_filename, fourcc, fps, (frame_width, frame_height))
 
 
-
     #グラフ表示の際のx軸範囲初期設定（何フレーム分の角度を一度に表示したいか）
     first_frame_num = 0
     last_frame_num = 50
@@ -272,17 +287,15 @@ def main():
     #グラフの初期化
     #x軸の幅を設定、時間軸、1フレームごと
     graph_x = np.arange(first_frame_num, last_frame_num)
-    
-
-    #骨格検出するクラスのインスタンス生成
-    skelton_est = PoseAnalyzer(first_frame_num, last_frame_num)
+    graph_y = np.zeros(last_frame_num)
 
     
     #最初の表示部分
-    lines_r_ankle, = plt.plot(graph_x, skelton_est.right_ankle_angles_traj, color="#ff6347", label="Angle R Ankle")
-    lines_r_knee, = plt.plot(graph_x, skelton_est.right_knee_angles_traj, color="#ffa500", label="Angle R Knee")
-    lines_l_ankle, = plt.plot(graph_x, skelton_est.left_ankle_angles_traj, color="#40e0d0", label="Angle L Ankle")
-    lines_l_knee, = plt.plot(graph_x, skelton_est.left_knee_angles_traj, color="#90ee90", label="Angle L Knee")
+    lines_r_ankle, = plt.plot(graph_x, graph_y, color="#ff6347", label="Angle R Ankle")
+    lines_r_knee, = plt.plot(graph_x, graph_y, color="#ffa500", label="Angle R Knee")
+    lines_l_ankle, = plt.plot(graph_x, graph_y, color="#40e0d0", label="Angle L Ankle")
+    lines_l_knee, = plt.plot(graph_x, graph_y, color="#90ee90", label="Angle L Knee")
+
 
     plt.xlabel("frame number")
     plt.ylabel("angle[degrees]")
@@ -292,7 +305,10 @@ def main():
 
     plt.legend(loc="lower left")
 
+    # plt.show()
 
+    #骨格検出するクラスのインスタンス生成
+    skelton_est = PoseAnalyzer(first_frame_num, last_frame_num)
 
     while True:
         ret, frame = cap.read()
@@ -307,37 +323,76 @@ def main():
         small_frame = cv2.resize(frame, (int(width * resize_scale), int(height * resize_scale)))
         small_height, small_width, _ = small_frame.shape
 
-       #PoseAnalyzerのanalyzeメソッドを実行することで必要な情報が返る
-        result = skelton_est.analyze(small_frame)
-
-        
+        #PoseAnalyzerのanalyzeメソッドを実行することで必要な情報が返る
+        pose_result = skelton_est.analyze(small_frame)
 
 
-        # #画面上に角度情報を表示
+        #画面上に角度情報を表示
+        #PoseAnalyzerに表示をいれたバージョン
         # skelton_est.display_angles(small_frame, "Angle R Ankle", (0, 30), (71, 99, 255))
         # skelton_est.display_angles(small_frame, "Angle R Knee", (0, 60), (0, 165, 255))
         # skelton_est.display_angles(small_frame, "Angle L Ankle", (0, 90), (208, 224, 64))
         # skelton_est.display_angles(small_frame, "Angle L Knee", (0, 120), (144, 238, 144))
 
+        cv2.putText(small_frame,
+            f"Angle R Ankle: {int(pose_result["right_ankle_angles_list"][-1])}",
+            org=(0, 30),
+            fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            fontScale=0.8,
+            color=(71, 99, 255),
+            thickness=2,
+            lineType=cv2.LINE_AA)
+
+
+        cv2.putText(small_frame,
+            f"Angle R Knee: {int(pose_result["right_knee_angles_list"][-1])}",
+            org=(0, 60),
+            fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            fontScale=0.8,
+            color=(0, 165, 255),
+            thickness=2,
+            lineType=cv2.LINE_AA)
+
+        cv2.putText(small_frame,
+            f"Angle L Ankle: {int(pose_result["left_ankle_angles_list"][-1])}",
+            org=(0, 90),
+            fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            fontScale=0.8,
+            color=(208, 224, 64),
+            thickness=2,
+            lineType=cv2.LINE_AA)
+
+        cv2.putText(small_frame,
+            f"Angle L Knee: {int(pose_result["left_knee_angles_list"][-1])}",
+            org=(0, 120),
+            fontFace=cv2.FONT_HERSHEY_DUPLEX,
+            fontScale=0.8,
+            color=(144, 238, 144),
+            thickness=2,
+            lineType=cv2.LINE_AA)
+
         
 
 
-        # cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_ANKLE][1])), 5, (71, 99, 255), -1)
-        # cv2.circle(small_frame, (int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][0]), int(right_pixcel[mp_holistic.PoseLandmark.RIGHT_KNEE][1])), 5, (0, 165, 255), -1)
-        # cv2.circle(small_frame, (int(left_pixcel[mp_holistic.PoseLandmark.LEFT_ANKLE][0]), int(left_pixcel[mp_holistic.PoseLandmark.LEFT_ANKLE][1])), 5, (208, 224, 64), -1)
-        # cv2.circle(small_frame, (int(left_pixcel[mp_holistic.PoseLandmark.LEFT_KNEE][0]), int(left_pixcel[mp_holistic.PoseLandmark.LEFT_KNEE][1])), 5, (144, 238, 144), -1)
+        cv2.circle(small_frame, (int(pose_result["r_joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]), int(pose_result["r_joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1])), 5, (71, 99, 255), -1)
+        cv2.circle(small_frame, (int(pose_result["r_joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][0]), int(pose_result["r_joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][1])), 5, (0, 165, 255), -1)
+        cv2.circle(small_frame, (int(pose_result["l_joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][0]), int(pose_result["l_joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][1])), 5, (208, 224, 64), -1)
+        cv2.circle(small_frame, (int(pose_result["l_joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]), int(pose_result["l_joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1])), 5, (144, 238, 144), -1)
+
+
+
 
 
         
         ######グラフ表示のための更新
         
-
+        graph_x = np.arange(pose_result["first_frame_num"], pose_result["last_frame_num"])
     
     
-        # lines_r_ankle.set_data(graph_x, right_ankle_angles_traj)
-        # lines_r_knee.set_data(graph_x, right_knee_angles_traj)
-        # lines_l_ankle.set_data(graph_x, left_ankle_angles_traj)
-        # lines_l_knee.set_data(graph_x, left_knee_angles_traj)
+        lines_r_ankle.set_data(graph_x, pose_result["right_ankle_angles_traj"])
+        lines_r_knee.set_data(graph_x, pose_result["right_knee_angles_traj"])
+        lines_l_ankle.set_data(graph_x, pose_result["left_ankle_angles_traj"])
+        lines_l_knee.set_data(graph_x, pose_result["left_knee_angles_traj"])
 
         plt.xlim(graph_x.min(), graph_x.max())
     
@@ -353,11 +408,11 @@ def main():
 
 
 
-        # リソースを解放
-        cap.release()
-        out.release()  # 保存用のVideoWriterを解放
-        cv2.destroyAllWindows()
-        print(f"保存された動画ファイル: {output_filename}")
+    # リソースを解放
+    cap.release()
+    out.release()  # 保存用のVideoWriterを解放
+    cv2.destroyAllWindows()
+    print(f"保存された動画ファイル: {output_filename}")
 
 
 if __name__ == "__main__":
