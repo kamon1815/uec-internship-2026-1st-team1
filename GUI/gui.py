@@ -161,21 +161,24 @@ class CamApplication(tk.Frame):
         master.title("gui")
         master.geometry("800x600")
 
-        self.grid_columnconfigure(0,weight=1)
-        self.grid_columnconfigure(1,weight=5)
-        self.grid_rowconfigure(0,weight=1)
+
+        self.cam_window = tk.Toplevel(self)
+        self.cam_window.title("camera")
+        self.cam_window.geometry("800x600")
+
+        self.cam = CameraFactory().create()
+        self.fcreator = None
+        self.decoder = self.cam.decoder()
 
 
-        self.left_container = tk.Frame(self)
-        self.left_container.grid(row=0,column=0,sticky = "nsew",padx=5,pady=5)
-
-        self.right_container = tk.Frame(self)
-        self.right_container.grid(row=0,column=1,sticky = "nsew",padx=5,pady=5)
-
-        self.setup_left_side()
-        self.setup_right_side()
+        self.canvasw = tk.Canvas(self.cam_window)
+        self.canvasw.pack(fill = tk.BOTH,expand=True)
 
 
+        
+        self.framerateValues = [1, 10, 50, 100, 125, 250, 500, 950, 1000, 
+                                        1500, 2000, 2500, 3000, 3200, 4000, 5000, 
+                                        8000, 10000, 20000, 25000, 30000]
 
         self.framerateStr = tk.IntVar()
         self.resolutionStr = tk.StringVar()
@@ -186,6 +189,26 @@ class CamApplication(tk.Frame):
         self.isRec = False
         self.locker = threading.Lock()
         self.font = tkfont.Font(self,family="Arial",size=10,weight="bold")
+        
+
+        self.grid_columnconfigure(0,weight=20)
+        self.grid_columnconfigure(1,weight=1)
+        self.grid_rowconfigure(0,weight=1)
+
+
+        self.left_container = ttk.Frame(self)
+        self.left_container.grid(row=0,column=0,sticky = "nsew",padx=5,pady=5)
+
+        self.right_container = ttk.Frame(self)
+        self.right_container.grid(row=0,column=1,sticky = "nsew",padx=5,pady=5)
+
+        self.setup_left_side()
+        self.setup_right_side()
+
+        #self.createWidget()
+
+
+
 
 
 
@@ -196,27 +219,27 @@ class CamApplication(tk.Frame):
 
     def setup_left_side(self):
         self.left_container.grid_columnconfigure(0,weight=1)
-        self.left_container.grid_rowconfigure(0,weight=6)
-        self.left_container.grid_rowconfigure(1,weight=4)
+        self.left_container.grid_rowconfigure(0,weight=8)
+        self.left_container.grid_rowconfigure(1,weight=2)
 
 
-        self.canvas = tk.LabelFrame(self.left_container,
+        self.canvas = ttk.LabelFrame(self.left_container,
                                     text="grahukari"
                                                 )
         self.canvas.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
 
-        self.gurahukari_label = tk.Label(self.canvas,text ="takasa")
+        self.gurahukari_label = ttk.Label(self.canvas,text ="takasa")
         self.gurahukari_label.pack(padx=10,pady=20)
         
         #---------------------------------------------------
         # takasahantei frame
         #---------------------------------------------------
-        self.takasahanteiFrame = tk.LabelFrame(self.left_container,
+        self.takasahanteiFrame = ttk.LabelFrame(self.left_container,
                                                 text="takasahantei"
                                                 )
         self.takasahanteiFrame.grid(row=1,column=0,sticky="nsew",padx=5,pady=5)
 
-        self.takasa_label = tk.Label(self.takasahanteiFrame,text ="takasa")
+        self.takasa_label = ttk.Label(self.takasahanteiFrame,text ="takasa")
         self.takasa_label.pack(padx=10,pady=20)
 
 
@@ -228,28 +251,430 @@ class CamApplication(tk.Frame):
         # siseihantei frame
         #---------------------------------------------------
 
-        self.siseihanteiframe = tk.LabelFrame(self.right_container, 
+        self.siseihanteiframe = ttk.LabelFrame(self.right_container, 
                                           text="siseihanntei"
                                           )
         self.siseihanteiframe.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
 
-        self.sisei_label = tk.Label(self.siseihanteiframe,text="ここにはんていがでる",font=("メイリオ",12))
+        self.sisei_label = ttk.Label(self.siseihanteiframe,text="ここにはんていがでる",font=("メイリオ",12))
         self.sisei_label.pack(padx=10,pady=20)
         
         #---------------------------------------------------
         # gurahu
         #---------------------------------------------------
-        self.gurafuFrame = tk.LabelFrame(self.right_container, 
-                                        text="grafu"
+        self.setframe = ttk.LabelFrame(self.right_container, 
+                                        text="set"
                                         )
-        self.gurafuFrame.grid(row=1,column=0,sticky="nsew",padx=5,pady=5)
+        self.setframe.grid(row=1,column=0,sticky="nsew",padx=5,pady=5)
 
-        grafu_label=tk.Label(self.gurafuFrame,text = "ここにグラフが表示されます")
-        grafu_label.pack(padx=10,pady=10)
+        self.setframe.grid_rowconfigure(0,weight=1)
 
+        for i in range(10):
+            self.setframe.grid_rowconfigure(i,weight=2,)
+
+
+
+#
+            
+        self.framerateLabel = ttk.Label(self.setframe,text="Framerate[fps]", width=20)
+        self.framerateLabel.grid(row=0,column=0,sticky="news",padx=5, pady=5)
+            
+        self.framerateList = ttk.Combobox(self.setframe, 
+                                                      values=self.framerateValues, 
+                                                      textvariable=self.framerateStr)
+        self.framerateList.grid(row=0,column=1,sticky="news",padx=5, pady=5)
+        self.framerateList.bind("<<ComboboxSelected>>", self.updateFramerate)
+
+        #
+            
+
+        self.shutterLabel = ttk.Label(self.setframe,text="Shutter speed[sec]", width=20)
+        self.shutterLabel.grid(row=1,column=0,sticky="news",padx=5, pady=5)
+        
+        self.shutterList = ttk.Combobox(self.setframe,  
+                                                textvariable=self.shutterStr)
+        self.shutterList.grid(row=1,column=1,sticky="news",padx=5, pady=5)
+        self.shutterList.bind("<<ComboboxSelected>>", self.updateShutter)
+
+
+        #
+        self.resolutionLabel = ttk.Label(self.setframe,text="Resolution[pixel]", width=20)
+        self.resolutionLabel.grid(row=2,column=0,sticky="news",padx=5, pady=5)
+        
+        self.resolutionList = ttk.Combobox(self.setframe,  
+                                                   textvariable=self.resolutionStr)
+        self.resolutionList.grid(row=2,column=1,sticky="news",padx=5, pady=5)
+        self.resolutionList.bind("<<ComboboxSelected>>", self.updateResolution)
+
+
+        #
+        self.acqusitionLabel = ttk.Label(self.setframe,text="Acquisition mode", width=18)
+        self.acqusitionLabel.grid(row=3,column=0,sticky="news",padx=5, pady=5)
+    
+        self.acqusition1 = tk.Radiobutton(self.setframe,
+                                              text="single",
+                                              value=0,
+                                              variable=self.acqutionVal,
+                                              command=self.updateAcquisition)
+        self.acqutsiion2 = tk.Radiobutton(self.setframe,
+                                              text="continuous",
+                                              value=1,
+                                              variable=self.acqutionVal,
+                                              command=self.updateAcquisition)
+        self.acqusition1.grid(row=3,column=1,sticky="news",padx=5, pady=5)
+        self.acqutsiion2.grid(row=4,column=1,sticky="news",padx=5, pady=5)
+
+#
+
+
+        self.savefilesLabel = ttk.Label(self.setframe,text="Save file", width=18)
+        self.savefilesLabel.grid(row=5,column=0,sticky="news",padx=5, pady=5)
+
+        self.savefile_csv = tk.Radiobutton(self.setframe,
+                                           text="csv",
+                                           value=FILE_TYPE.CSV.value,
+                                           variable=self.savefileVal)
+        self.savefile_bin = tk.Radiobutton(self.setframe,
+                                           text="binary",
+                                           value=FILE_TYPE.BINARY.value,
+                                           variable=self.savefileVal,)
+        self.savefile_csv.grid(row=5,column=1,sticky="news",padx=5, pady=5)
+        self.savefile_bin.grid(row=6,column=1,sticky="news",padx=5, pady=5)
+
+
+#
+        self.recButton = ttk.Button(self.setframe, 
+                                    text = "REC", 
+                                    command=self.rec,
+                                    width=15)
+        self.recButton.grid(row=7,column=0,sticky="news",padx=5, pady=5)
+        self.uistopCheck = ttk.Checkbutton(self.setframe,
+                                           text="Stop Live",
+                                           variable=self.uistopVal,
+                                           command=self.uistop)
+        self.uistopCheck.grid(row=7,column=1,sticky="news",padx=5, pady=5)
+
+        self.resetSeqButton = ttk.Button(self.setframe,
+                                         text = "Reset Seq No",
+                                         command = self.resetSequenceNo,
+                                         width = 30)
+        self.resetSeqButton.grid(row=8,column=1,sticky="news",padx=5, pady=5)      
+
+
+
+#
+
+
+        self.resetButton = ttk.Button(self.setframe, 
+                                    text = "RESET", 
+                                    command=self.resetDevice,
+                                    width=15)
+        self.resetButton.grid(row=9,column=0,sticky="news",padx=5, pady=5)   
+
+
+
+        #grafu_label=tk.Label(self.gurafuFrame)
+        #grafu_label.pack(padx=10,pady=10)
+        #self.createWidget()
 
     def draw_image(self,photo):
         self.canvas.create_image(0,0,image=photo,anchor=tk.NW)
+
+
+    def createWidget(self):
+        #---------------------------------------------------
+        # options frame
+        #---------------------------------------------------
+  
+        #self.optionFrame = ttk.LabelFrame(self, 
+                                       #   text="options", 
+                                        #  width=frameWidth,
+                                      #    relief=tk.RAISED)
+        #self.optionFrame.propagate(False)
+        #self.optionFrame.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
+
+        #---------------------------------------------------
+        # framerate
+        #---------------------------------------------------
+        self.frameratePanel = ttk.Frame(self.gurafuFrame,
+                                        #width=frameWidth,
+                                        height=30,
+                                        relief=tk.FLAT)
+        self.frameratePanel.propagate(False)
+        self.frameratePanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
+
+        self.framerateLabel = ttk.Label(self.frameratePanel,text="Framerate[fps]", width=20)
+        self.framerateLabel.pack(side=tk.LEFT, padx=5)
+
+        self.framerateList = ttk.Combobox(self.frameratePanel, 
+                                          values=self.framerateValues, 
+                                          textvariable=self.framerateStr)
+        self.framerateList.pack(side=tk.LEFT, padx=5)
+        self.framerateList.bind("<<ComboboxSelected>>", self.updateFramerate)
+
+        #---------------------------------------------------
+        # shutter
+        #---------------------------------------------------
+        self.shutterPanel = ttk.Frame(self.gurafuFrame,
+                                      #width=frameWidth,
+                                      height=30,
+                                      relief=tk.FLAT)
+        self.shutterPanel.propagate(False)
+        self.shutterPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
+
+        self.shutterLabel = ttk.Label(self.shutterPanel,text="Shutter speed[sec]", width=20)
+        self.shutterLabel.pack(side=tk.LEFT, padx=5)
+
+        self.shutterList = ttk.Combobox(self.shutterPanel,  
+                                        textvariable=self.shutterStr)
+        self.shutterList.pack(side=tk.LEFT, padx=5)
+        self.shutterList.bind("<<ComboboxSelected>>", self.updateShutter)
+
+        #---------------------------------------------------
+        # resolution
+        #---------------------------------------------------
+        self.resolutionPanel = ttk.Frame(self.gurafuFrame,
+                                         #width=frameWidth,
+                                         height=30,
+                                         relief=tk.FLAT)
+        self.resolutionPanel.propagate(False)
+        self.resolutionPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
+
+        self.resolutionLabel = ttk.Label(self.resolutionPanel,text="Resolution[pixel]", width=20)
+        self.resolutionLabel.pack(side=tk.LEFT, padx=5)
+
+        self.resolutionList = ttk.Combobox(self.resolutionPanel,  
+                                           textvariable=self.resolutionStr)
+        self.resolutionList.pack(side=tk.LEFT, padx=5)
+        self.resolutionList.bind("<<ComboboxSelected>>", self.updateResolution)
+
+        #---------------------------------------------------
+        # Acquisition mode
+        #---------------------------------------------------
+        self.acquisitionPanel = ttk.Frame(self.gurafuFrame,
+                                          #width=frameWidth,
+                                          height=30,
+                                          relief=tk.FLAT)
+        self.acquisitionPanel.propagate(False)
+        self.acquisitionPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
+
+        self.acqusitionLabel = ttk.Label(self.acquisitionPanel,text="Acquisition mode", width=18)
+        self.acqusitionLabel.pack(side=tk.LEFT, padx=5)
+
+        self.acqusition1 = tk.Radiobutton(self.acquisitionPanel,
+                                          text="single",
+                                          value=0,
+                                          variable=self.acqutionVal,
+                                          command=self.updateAcquisition)
+        self.acqutsiion2 = tk.Radiobutton(self.acquisitionPanel,
+                                          text="continuous",
+                                          value=1,
+                                          variable=self.acqutionVal,
+                                          command=self.updateAcquisition)
+        self.acqusition1.pack(side=tk.LEFT, padx = 5)
+        self.acqutsiion2.pack(side=tk.LEFT, padx = 5)
+
+        #---------------------------------------------------
+        # savefiles
+        #---------------------------------------------------
+        self.savefilesPanel = ttk.Frame(self.gurafuFrame,
+                                        #width=frameWidth,
+                                        height=30,
+                                        relief=tk.FLAT)
+        self.savefilesPanel.propagate(False)
+        self.savefilesPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
+
+        self.savefilesLabel = ttk.Label(self.savefilesPanel,text="Save file", width=18)
+        self.savefilesLabel.pack(side=tk.LEFT, padx=5)
+
+        self.savefile_csv = tk.Radiobutton(self.savefilesPanel,
+                                           text="csv",
+                                           value=FILE_TYPE.CSV.value,
+                                           variable=self.savefileVal)
+        self.savefile_bin = tk.Radiobutton(self.savefilesPanel,
+                                           text="binary",
+                                           value=FILE_TYPE.BINARY.value,
+                                           variable=self.savefileVal,)
+        self.savefile_csv.pack(side=tk.LEFT, padx = 5)
+        self.savefile_bin.pack(side=tk.LEFT, padx = 5)
+
+
+        #---------------------------------------------------
+        # record button
+        #---------------------------------------------------
+        self.recPanel = ttk.Frame(self.gurafuFrame,
+                                  #width=frameWidth,
+                                  height=30,
+                                  relief=tk.FLAT)
+        self.recPanel.propagate(False)
+        self.recPanel.pack(side=tk.BOTTOM, fill=tk.Y, padx=5, pady=5)
+        self.recButton = ttk.Button(self.recPanel, 
+                                    text = "REC", 
+                                    command=self.rec,
+                                    width=15)
+        self.recButton.pack(side=tk.RIGHT,anchor="center", expand=True)
+        self.uistopCheck = ttk.Checkbutton(self.recPanel,
+                                           text="Stop Live",
+                                           variable=self.uistopVal,
+                                           command=self.uistop)
+        self.uistopCheck.pack(side=tk.RIGHT,anchor="center", expand=True)
+
+        self.resetSeqButton = ttk.Button(self.recPanel,
+                                         text = "Reset Seq No",
+                                         command = self.resetSequenceNo,
+                                         width = 30)
+        self.resetSeqButton.pack(side=tk.RIGHT, anchor = "center", expand = True)
+
+
+        #---------------------------------------------------
+        # reset button
+        #---------------------------------------------------
+        self.resetPanel = ttk.Frame(self.gurafuFrame,
+                                 # width=frameWidth,
+                                  height=30,
+                                  relief=tk.FLAT)
+        self.resetPanel.propagate(False)
+        self.resetPanel.pack(side=tk.BOTTOM, fill=tk.Y, padx=5, pady=5)
+        self.resetButton = ttk.Button(self.resetPanel, 
+                                    text = "RESET", 
+                                    command=self.resetDevice,
+                                    width=15)
+        self.resetButton.pack(side=tk.RIGHT,anchor="sw", expand=True)
+
+
+
+        #---------------------------------------------------
+        # canvas
+        #---------------------------------------------------
+        #self.canvas = tk.Canvas(self, width=1296, height=1080)
+        #self.canvas.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        #---------------------------------------------------
+        # initialize ui
+        #---------------------------------------------------
+        self.framerateList.set(self.cam.framerate())
+        self.updateResolutionList()
+        self.updateShutterList()
+        self.updateAcquisition()
+
+    def update(self):
+        data = self.cam.grab()
+        self.updatecanvas(data)
+        self.updateID = self.after(self.delay, self.update)
+
+    def updatecanvas(self, data):
+        cw = self.canvasw.winfo_width()
+        ch = self.canvasw.winfo_height()
+        w = data.resolution().width
+        h = data.resolution().height
+        scale = 1
+        if cw > 1 and ch > 1:
+            scale = cw/w if cw/w < ch/h else ch/h
+
+        array = self.decoder.decode(data)
+        i = Image.fromarray(array).resize((int(w*scale), int(h*scale)))
+        self.img = ImageTk.PhotoImage(image=i)
+        self.canvasw.delete("all")
+        pos = [(cw-i.width)/2,(ch-i.height)/2]
+
+        # 
+        self.canvasw.create_image(pos[0], pos[1], anchor="nw", image=self.img)
+        self.canvasw.create_text(pos[0]+5, pos[1]+5, anchor="nw", 
+                                text="SequeceNo:" + str(data.sequenceNo()),
+                                font=self.font, fill="limeGreen")
+
+    def updateFramerate(self, e):
+        rate = self.framerateStr.get()
+        self.cam.setFramerateShutter(rate, rate)
+        self.updateResolutionList()
+        self.updateShutterList()
+
+    def updateShutter(self, e):
+        resStr = self.shutterStr.get().split("1/")
+        self.cam.setShutter(int(resStr[1]))
+
+    def updateResolution(self, e):
+        resStr = self.resolutionStr.get().split("x")
+        self.cam.setResolution(int(resStr[0]), int(resStr[1]))
+
+    def updateResolutionList(self):
+        resMax = self.cam.resolutionMax()
+        resLimit = self.cam.resolutionLimit()
+        hStep = resLimit.limitH.step
+        hMin = resLimit.limitH.min
+        hMax = resMax.height
+        wStep = resLimit.limitW.step
+        wMin = resLimit.limitW.min
+        wMax = resMax.width
+
+        resW = range(wMin, wMax+1, wStep if wStep != 0 else 1)
+        resH = range(hMin, hMax+1, hStep if hStep != 0 else 1)
+        resValues = []
+        for h in resH:
+            for w in resW:
+                resValues.append(str(w)+"x"+str(h))
+        self.resolutionList.config(values=resValues)
+        res = self.cam.resolution()
+        self.resolutionList.set(str(res.width)+"x"+str(res.height))
+
+    def updateShutterList(self):
+        fps = self.cam.framerate()
+        shutValues = []
+        for s in self.framerateValues:
+               if s >= fps:
+                   shutValues.append("1/" + str(s))
+        self.shutterList.config(values = shutValues)
+        shutter = self.cam.shutter()
+        self.shutterList.set("1/" + str(shutter))
+
+    def updateAcquisition(self):
+        acq = self.acqutionVal.get()
+        if acq and not self.cam.isXferring():
+            self.cam.beginXfer(self.cppCallback)
+        if not acq and self.cam.isXferring():
+            self.cam.endXfer()
+
+    def cppCallback(self, xferData):
+        self.locker.acquire()
+        if self.isRec:
+            self.fcreator.write(xferData)
+        self.locker.release()
+
+    def rec(self):
+        self.locker.acquire()
+        self.isRec = not self.isRec
+        if self.isRec:
+            self.recButton.state(["pressed"])
+            self.fcreator = FileCreator(str(BASE_DIR / "test"), self.savefileVal.get())
+        else:
+            self.recButton.state(["!pressed"])
+            self.fcreator.close()
+            FileCreator.create_json(str(BASE_DIR / "test"), self.cam)
+        self.locker.release()
+
+    def uistop(self):
+        if self.uistopVal.get():
+            self.after_cancel(self.updateID)
+        else:
+            self.updateID = self.after(self.delay, self.update)
+
+    def terminate(self):
+        self.after_cancel(self.updateID)
+        self.cam.close()
+        if self.fcreator is not None:
+            self.fcreator.close()
+
+    def resetSequenceNo(self):
+        self.cam.resetSequenceNo()
+
+    def resetDevice(self):
+        self.locker.acquire()
+        self.cam.resetDevice()
+        self.cam = CameraFactory().create()
+        self.framerateList.set(self.cam.framerate())
+        self.updateResolutionList()
+        self.updateShutterList()
+        self.locker.release()
 
 
     
@@ -369,341 +794,7 @@ class FileApplication(tk.Frame):
         data = self.reader.read(seqNo)
         self.createimagedata(data, seqNo)
 
-class SetApplication(tk.Frame):
-    def __init__(self, master = None):
-        super().__init__(master)
-        master.title("gui_sample")
-        master.geometry("800x600")
-        self.pack(expand=1, fill=tk.BOTH, anchor=tk.NW)
 
-
-
-        self.cam_window = tk.Toplevel(self)
-        self.cam_window.title("camera")
-        self.cam_window.geometry("800x600")
-
-        self.cam = CameraFactory().create()
-        self.fcreator = None
-        self.decoder = self.cam.decoder()
-
-
-        self.canvas = tk.Canvas(self.cam_window)
-        self.canvas.pack(fill = tk.BOTH,expand=True)
-
-        self.framerateValues = [1, 10, 50, 100, 125, 250, 500, 950, 1000, 
-                                1500, 2000, 2500, 3000, 3200, 4000, 5000, 
-                                8000, 10000, 20000, 25000, 30000]
-
-        self.framerateStr = tk.IntVar()
-        self.resolutionStr = tk.StringVar()
-        self.shutterStr = tk.StringVar()
-        self.acqutionVal = tk.IntVar()
-        self.savefileVal = tk.IntVar()
-        self.uistopVal = tk.BooleanVar()
-        self.isRec = False
-        self.locker = threading.Lock()
-        self.font = tkfont.Font(self,family="Arial",size=10,weight="bold")
-
-        self.createWidget()
-
-        self.delay = 15
-        self.updateID = 0
-        self.update()
-
-    def createWidget(self):
-        #---------------------------------------------------
-        # options frame
-        #---------------------------------------------------
-        frameWidth=300
-        self.optionFrame = ttk.LabelFrame(self, 
-                                          text="options", 
-                                          width=frameWidth,
-                                          relief=tk.RAISED)
-        self.optionFrame.propagate(False)
-        self.optionFrame.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
-
-        #---------------------------------------------------
-        # framerate
-        #---------------------------------------------------
-        self.frameratePanel = ttk.Frame(self.optionFrame,
-                                        width=frameWidth,
-                                        height=30,
-                                        relief=tk.FLAT)
-        self.frameratePanel.propagate(False)
-        self.frameratePanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
-
-        self.framerateLabel = ttk.Label(self.frameratePanel,text="Framerate[fps]", width=20)
-        self.framerateLabel.pack(side=tk.LEFT, padx=5)
-
-        self.framerateList = ttk.Combobox(self.frameratePanel, 
-                                          values=self.framerateValues, 
-                                          textvariable=self.framerateStr)
-        self.framerateList.pack(side=tk.LEFT, padx=5)
-        self.framerateList.bind("<<ComboboxSelected>>", self.updateFramerate)
-
-        #---------------------------------------------------
-        # shutter
-        #---------------------------------------------------
-        self.shutterPanel = ttk.Frame(self.optionFrame,
-                                      width=frameWidth,
-                                      height=30,
-                                      relief=tk.FLAT)
-        self.shutterPanel.propagate(False)
-        self.shutterPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
-
-        self.shutterLabel = ttk.Label(self.shutterPanel,text="Shutter speed[sec]", width=20)
-        self.shutterLabel.pack(side=tk.LEFT, padx=5)
-
-        self.shutterList = ttk.Combobox(self.shutterPanel,  
-                                        textvariable=self.shutterStr)
-        self.shutterList.pack(side=tk.LEFT, padx=5)
-        self.shutterList.bind("<<ComboboxSelected>>", self.updateShutter)
-
-        #---------------------------------------------------
-        # resolution
-        #---------------------------------------------------
-        self.resolutionPanel = ttk.Frame(self.optionFrame,
-                                         width=frameWidth,
-                                         height=30,
-                                         relief=tk.FLAT)
-        self.resolutionPanel.propagate(False)
-        self.resolutionPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
-
-        self.resolutionLabel = ttk.Label(self.resolutionPanel,text="Resolution[pixel]", width=20)
-        self.resolutionLabel.pack(side=tk.LEFT, padx=5)
-
-        self.resolutionList = ttk.Combobox(self.resolutionPanel,  
-                                           textvariable=self.resolutionStr)
-        self.resolutionList.pack(side=tk.LEFT, padx=5)
-        self.resolutionList.bind("<<ComboboxSelected>>", self.updateResolution)
-
-        #---------------------------------------------------
-        # Acquisition mode
-        #---------------------------------------------------
-        self.acquisitionPanel = ttk.Frame(self.optionFrame,
-                                          width=frameWidth,
-                                          height=30,
-                                          relief=tk.FLAT)
-        self.acquisitionPanel.propagate(False)
-        self.acquisitionPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
-
-        self.acqusitionLabel = ttk.Label(self.acquisitionPanel,text="Acquisition mode", width=18)
-        self.acqusitionLabel.pack(side=tk.LEFT, padx=5)
-
-        self.acqusition1 = tk.Radiobutton(self.acquisitionPanel,
-                                          text="single",
-                                          value=0,
-                                          variable=self.acqutionVal,
-                                          command=self.updateAcquisition)
-        self.acqutsiion2 = tk.Radiobutton(self.acquisitionPanel,
-                                          text="continuous",
-                                          value=1,
-                                          variable=self.acqutionVal,
-                                          command=self.updateAcquisition)
-        self.acqusition1.pack(side=tk.LEFT, padx = 5)
-        self.acqutsiion2.pack(side=tk.LEFT, padx = 5)
-
-        #---------------------------------------------------
-        # savefiles
-        #---------------------------------------------------
-        self.savefilesPanel = ttk.Frame(self.optionFrame,
-                                        width=frameWidth,
-                                        height=30,
-                                        relief=tk.FLAT)
-        self.savefilesPanel.propagate(False)
-        self.savefilesPanel.pack(side=tk.TOP, fill=tk.Y, padx=5, pady=5)
-
-        self.savefilesLabel = ttk.Label(self.savefilesPanel,text="Save file", width=18)
-        self.savefilesLabel.pack(side=tk.LEFT, padx=5)
-
-        self.savefile_csv = tk.Radiobutton(self.savefilesPanel,
-                                           text="csv",
-                                           value=FILE_TYPE.CSV.value,
-                                           variable=self.savefileVal)
-        self.savefile_bin = tk.Radiobutton(self.savefilesPanel,
-                                           text="binary",
-                                           value=FILE_TYPE.BINARY.value,
-                                           variable=self.savefileVal,)
-        self.savefile_csv.pack(side=tk.LEFT, padx = 5)
-        self.savefile_bin.pack(side=tk.LEFT, padx = 5)
-
-
-        #---------------------------------------------------
-        # record button
-        #---------------------------------------------------
-        self.recPanel = ttk.Frame(self.optionFrame,
-                                  width=frameWidth,
-                                  height=30,
-                                  relief=tk.FLAT)
-        self.recPanel.propagate(False)
-        self.recPanel.pack(side=tk.BOTTOM, fill=tk.Y, padx=5, pady=5)
-        self.recButton = ttk.Button(self.recPanel, 
-                                    text = "REC", 
-                                    command=self.rec,
-                                    width=15)
-        self.recButton.pack(side=tk.RIGHT,anchor="center", expand=True)
-        self.uistopCheck = ttk.Checkbutton(self.recPanel,
-                                           text="Stop Live",
-                                           variable=self.uistopVal,
-                                           command=self.uistop)
-        self.uistopCheck.pack(side=tk.RIGHT,anchor="center", expand=True)
-
-        self.resetSeqButton = ttk.Button(self.recPanel,
-                                         text = "Reset Seq No",
-                                         command = self.resetSequenceNo,
-                                         width = 30)
-        self.resetSeqButton.pack(side=tk.RIGHT, anchor = "center", expand = True)
-
-
-        #---------------------------------------------------
-        # reset button
-        #---------------------------------------------------
-        self.resetPanel = ttk.Frame(self.optionFrame,
-                                  width=frameWidth,
-                                  height=30,
-                                  relief=tk.FLAT)
-        self.resetPanel.propagate(False)
-        self.resetPanel.pack(side=tk.BOTTOM, fill=tk.Y, padx=5, pady=5)
-        self.resetButton = ttk.Button(self.resetPanel, 
-                                    text = "RESET", 
-                                    command=self.resetDevice,
-                                    width=15)
-        self.resetButton.pack(side=tk.RIGHT,anchor="sw", expand=True)
-
-
-
-        #---------------------------------------------------
-        # canvas
-        #---------------------------------------------------
-        self.canvas = tk.Canvas(self, width=1296, height=1080)
-        self.canvas.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
-
-        #---------------------------------------------------
-        # initialize ui
-        #---------------------------------------------------
-        self.framerateList.set(self.cam.framerate())
-        self.updateResolutionList()
-        self.updateShutterList()
-        self.updateAcquisition()
-
-    def update(self):
-        data = self.cam.grab()
-        self.updatecanvas(data)
-        self.updateID = self.after(self.delay, self.update)
-
-    def updatecanvas(self, data):
-        cw = self.canvas.winfo_width()
-        ch = self.canvas.winfo_height()
-        w = data.resolution().width
-        h = data.resolution().height
-        scale = 1
-        if cw > 1 and ch > 1:
-            scale = cw/w if cw/w < ch/h else ch/h
-
-        array = self.decoder.decode(data)
-        i = Image.fromarray(array).resize((int(w*scale), int(h*scale)))
-        self.img = ImageTk.PhotoImage(image=i)
-        self.canvas.delete("all")
-        pos = [(cw-i.width)/2,(ch-i.height)/2]
-
-        # 
-        self.canvas.create_image(pos[0], pos[1], anchor="nw", image=self.img)
-        self.canvas.create_text(pos[0]+5, pos[1]+5, anchor="nw", 
-                                text="SequeceNo:" + str(data.sequenceNo()),
-                                font=self.font, fill="limeGreen")
-
-    def updateFramerate(self, e):
-        rate = self.framerateStr.get()
-        self.cam.setFramerateShutter(rate, rate)
-        self.updateResolutionList()
-        self.updateShutterList()
-
-    def updateShutter(self, e):
-        resStr = self.shutterStr.get().split("1/")
-        self.cam.setShutter(int(resStr[1]))
-
-    def updateResolution(self, e):
-        resStr = self.resolutionStr.get().split("x")
-        self.cam.setResolution(int(resStr[0]), int(resStr[1]))
-
-    def updateResolutionList(self):
-        resMax = self.cam.resolutionMax()
-        resLimit = self.cam.resolutionLimit()
-        hStep = resLimit.limitH.step
-        hMin = resLimit.limitH.min
-        hMax = resMax.height
-        wStep = resLimit.limitW.step
-        wMin = resLimit.limitW.min
-        wMax = resMax.width
-
-        resW = range(wMin, wMax+1, wStep if wStep != 0 else 1)
-        resH = range(hMin, hMax+1, hStep if hStep != 0 else 1)
-        resValues = []
-        for h in resH:
-            for w in resW:
-                resValues.append(str(w)+"x"+str(h))
-        self.resolutionList.config(values=resValues)
-        res = self.cam.resolution()
-        self.resolutionList.set(str(res.width)+"x"+str(res.height))
-
-    def updateShutterList(self):
-        fps = self.cam.framerate()
-        shutValues = []
-        for s in self.framerateValues:
-               if s >= fps:
-                   shutValues.append("1/" + str(s))
-        self.shutterList.config(values = shutValues)
-        shutter = self.cam.shutter()
-        self.shutterList.set("1/" + str(shutter))
-
-    def updateAcquisition(self):
-        acq = self.acqutionVal.get()
-        if acq and not self.cam.isXferring():
-            self.cam.beginXfer(self.cppCallback)
-        if not acq and self.cam.isXferring():
-            self.cam.endXfer()
-
-    def cppCallback(self, xferData):
-        self.locker.acquire()
-        if self.isRec:
-            self.fcreator.write(xferData)
-        self.locker.release()
-
-    def rec(self):
-        self.locker.acquire()
-        self.isRec = not self.isRec
-        if self.isRec:
-            self.recButton.state(["pressed"])
-            self.fcreator = FileCreator(str(BASE_DIR / "test"), self.savefileVal.get())
-        else:
-            self.recButton.state(["!pressed"])
-            self.fcreator.close()
-            FileCreator.create_json(str(BASE_DIR / "test"), self.cam)
-        self.locker.release()
-
-    def uistop(self):
-        if self.uistopVal.get():
-            self.after_cancel(self.updateID)
-        else:
-            self.updateID = self.after(self.delay, self.update)
-
-    def terminate(self):
-        self.after_cancel(self.updateID)
-        self.cam.close()
-        if self.fcreator is not None:
-            self.fcreator.close()
-
-    def resetSequenceNo(self):
-        self.cam.resetSequenceNo()
-
-    def resetDevice(self):
-        self.locker.acquire()
-        self.cam.resetDevice()
-        self.cam = CameraFactory().create()
-        self.framerateList.set(self.cam.framerate())
-        self.updateResolutionList()
-        self.updateShutterList()
-        self.locker.release()
 
 
 
@@ -722,12 +813,12 @@ def main():
     notebook.add(camapp, text="cam")
     fileapp = FileApplication(master = root)
     notebook.add(fileapp, text="file")
-    setapp = SetApplication(master = root)
-    notebook.add(setapp,text="set")
+    #setapp = SetApplication(master = root)
+    #notebook.add(setapp,text="set")
    
 
-    setapp.mainloop()
-    setapp.terminate()
+    camapp.mainloop()
+    camapp.terminate()
 
 if __name__ == '__main__':
     main()
