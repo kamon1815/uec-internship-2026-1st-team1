@@ -27,9 +27,9 @@ while True:
 
     if not ret:
         break
-
+    #YOLOによりボールの位置を追跡
     detected_ball_position,ball_box = ball_detecter.detect(frame)
-
+    #ボール位置を補完
     ball_position,is_predicted = ball_tracker.update(detected_ball_position)
 
     if ball_position is not None:
@@ -44,14 +44,15 @@ while True:
 
         if is_predicted:
             cv2.putText(frame, "Predicted", (ball_x+10,ball_y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-
+    #mediapipeを実行して鼻とつま先の座標を取得
     toe_positions, nose_y = pose_detecter.detect(frame)
 
+    #ボールの高さ判定
     is_toohigh = ballheight_detecter.update(ball_position,nose_y)
     if is_toohigh:
         cv2.putText(frame,"BALL TOO HIGH", (30,160), cv2.FONT_HERSHEY_DUPLEX, 1.2, (255,0,255), 3, cv2.LINE_AA)
 
-
+    #接触判定を実施
     contact,distance = contact_counter.update(detected_ball_position,toe_positions)
 
     for toe_position in toe_positions:
