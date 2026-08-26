@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 #骨格分析のクラス
 # mediapipeで骨格推定し、関節角度などを計算する
 #外部からの操作は基本的にanalyzeメソッドを使う
+#基本的に１フレームずついれて処理を行うクラス、映像のフレームへの分解はクラスの外で行う
+#ただし、今まで計算した角度情報などはリストやdequeとして保持する
 class PoseAnalyzer:
     
     #mediapipeで使用している関節の各角度の数値を設定
@@ -49,12 +51,15 @@ class PoseAnalyzer:
         self.left_knee_angles_traj = deque([0] * self.last_frame_num, maxlen=self.last_frame_num)
 
 
-
         #計算したすべての関節角度を保存するリスト
         self.right_ankle_angles_list = []
         self.right_knee_angles_list = []
         self.left_ankle_angles_list = []
         self.left_knee_angles_list = []
+
+        #取得したい関節の番号
+        right_joint_num = [self.RIGHT_HIP, self.RIGHT_KNEE, self.RIGHT_ANKLE, self.RIGHT_FOOT_INDEX]
+        left_joint_num = [self.LEFT_HIP, self.LEFT_KNEE, self.LEFT_ANKLE, self.LEFT_FOOT_INDEX]
 
 
 
@@ -183,9 +188,40 @@ class PoseAnalyzer:
         return result_angle
 
 
-    # #基本的に外部からはこのanalyzeメソッドを使用
-    # def analyze(self):
+    #基本的に外部からはこのanalyzeメソッドを使用
+    def analyze(self, frame):
+        
 
+        #選んだ番号の関数の座標を取得
+        r_joint_pixcels, r_joint_data = self.get_selectecd_landmarks(frame, frame)
+        l_joint_pixcels, l_joint_data = self.get_selectecd_landmarks(frame, frame)
+
+        #関節角度の計算
+        angle_r_ankle = self.calc_joint_angles(self.RIGHT_ANKLE, r_joint_pixcels)
+        angle_r_knee = self.calc_joint_angles(self.RIGHT_KNEE, r_joint_pixcels)
+        angle_l_ankle = self.calc_joint_angles(self.LEFT_ANKLE, l_joint_pixcels)
+        angle_l_knee = self.calc_joint_angles(self.LEFT_KNEE, l_joint_pixcels)
+
+
+        #リストに新たに計算した角度を追加する
+        self.right_ankle_angles_list.append(angle_r_ankle)
+        self.right_knee_angles_list.append(angle_r_knee)
+        self.left_ankle_angles_list.append(angle_l_ankle)
+        self.left_knee_angles_list.append(angle_l_knee)
+
+        self.right_ankle_angles_traj.append(angle_r_ankle)
+        self.right_knee_angles_traj.append(angle_r_knee)
+        self.left_ankle_angles_traj.append(angle_l_ankle)
+        self.left_knee_angles_traj.append(angle_l_knee)
+
+
+        self.first_frame_num += 1
+        self.last_frame_num += 1
+
+
+        result = 
+
+        return result
 
 
             
@@ -201,15 +237,21 @@ class PoseAnalyzer:
 
 
 
+#＋＋＋外側でやる処理（ここではmain関数、統合後にはLifftingSupportSystemクラスで行う）＋＋＋
+# カメラ映像取得
+# 映像表示（画面上にマークを付ける場合はPoseAnalyzerから必要な値だけをもらって外で表示するプログラムは書く）
+# 映像の保存
+#グラフ表示（必要な値はPoseAnalyzerから取得）
 
 def main():
-
-    #サッカーの動画
+    #****************初期化設定****************
+    #動画の読み込み（カメラ映像取得の代わりに）
     # path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\video2.mp4"
     path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\movie\zikkenn4.avi" 
 
     cap = cv2.VideoCapture(path)
 
+    #リサイズの大きさも統合するためにクラスの外で行う
     resize_scale = 0.7
 
     # 保存する動画の設定
@@ -223,17 +265,19 @@ def main():
 
 
 
-    #グラフ表示の際のx軸範囲設定（何フレーム分の角度を一度に表示したいか）
+    #グラフ表示の際のx軸範囲初期設定（何フレーム分の角度を一度に表示したいか）
     first_frame_num = 0
     last_frame_num = 50
-
-    #骨格検出するクラスのインスタンス生成
-    skelton_est = PoseAnalyzer(first_frame_num, last_frame_num)
 
     #グラフの初期化
     #x軸の幅を設定、時間軸、1フレームごと
     graph_x = np.arange(first_frame_num, last_frame_num)
+    
 
+    #骨格検出するクラスのインスタンス生成
+    skelton_est = PoseAnalyzer(first_frame_num, last_frame_num)
+
+    
     #最初の表示部分
     lines_r_ankle, = plt.plot(graph_x, skelton_est.right_ankle_angles_traj, color="#ff6347", label="Angle R Ankle")
     lines_r_knee, = plt.plot(graph_x, skelton_est.right_knee_angles_traj, color="#ffa500", label="Angle R Knee")
@@ -261,33 +305,12 @@ def main():
 
         # フレームサイズを縮小
         small_frame = cv2.resize(frame, (int(width * resize_scale), int(height * resize_scale)))
-
-
         small_height, small_width, _ = small_frame.shape
 
-       
-    
+       #PoseAnalyzerのanalyzeメソッドを実行することで必要な情報が返る
+        result = skelton_est.analyze(small_frame)
 
-        #取得したい関節の番号
-        right_joint_num = [PoseAnalyzer.RIGHT_HIP, PoseAnalyzer.RIGHT_KNEE, PoseAnalyzer.RIGHT_ANKLE, PoseAnalyzer.RIGHT_FOOT_INDEX]
-        left_joint_num = [PoseAnalyzer.LEFT_HIP, PoseAnalyzer.LEFT_KNEE, PoseAnalyzer.LEFT_ANKLE, PoseAnalyzer.LEFT_FOOT_INDEX]
-
-        #選んだ番号の関数の座標を取得
-        r_joint_pixcels, r_joint_data = skelton_est.get_selectecd_landmarks(small_frame, right_joint_num)
-        l_joint_pixcels, l_joint_data = skelton_est.get_selectecd_landmarks(small_frame, left_joint_num)
-
-        #関節角度の計算
-        angle_r_ankle = skelton_est.calc_joint_angles(skelton_est.RIGHT_ANKLE, r_joint_pixcels)
-        angle_r_knee = skelton_est.calc_joint_angles(skelton_est.RIGHT_KNEE, r_joint_pixcels)
-        angle_l_ankle = skelton_est.calc_joint_angles(skelton_est.LEFT_ANKLE, l_joint_pixcels)
-        angle_l_knee = skelton_est.calc_joint_angles(skelton_est.LEFT_KNEE, l_joint_pixcels)
-
-
-        #リストに新たに計算した角度を追加する
-        skelton_est.right_ankle_angles_list.append(angle_r_ankle)
-        skelton_est.right_knee_angles_list.append(angle_r_knee)
-        skelton_est.left_ankle_angles_list.append(angle_l_ankle)
-        skelton_est.left_knee_angles_list.append(angle_l_knee)
+        
 
 
         # #画面上に角度情報を表示
@@ -307,10 +330,7 @@ def main():
 
         
         ######グラフ表示のための更新
-        skelton_est.right_ankle_angles_traj.append(angle_r_ankle)
-        skelton_est.right_knee_angles_traj.append(angle_r_knee)
-        skelton_est.left_ankle_angles_traj.append(angle_l_ankle)
-        skelton_est.left_knee_angles_traj.append(angle_l_knee)
+        
 
     
     
@@ -319,16 +339,10 @@ def main():
         # lines_l_ankle.set_data(graph_x, left_ankle_angles_traj)
         # lines_l_knee.set_data(graph_x, left_knee_angles_traj)
 
-
-
-
-    
-    
         plt.xlim(graph_x.min(), graph_x.max())
     
     
         plt.pause(0.01)
-        ######
 
 
         # 縮小されたフレームを保存
