@@ -12,6 +12,9 @@ from enum import IntEnum
 import pypuclib
 from pypuclib import CameraFactory, Camera, XferData, Resolution, Decoder
 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 BASE_DIR = Path(__file__).resolve().parent
 
 class FILE_TYPE(IntEnum):
@@ -149,7 +152,7 @@ def add_tab(fname):
 
 
 
-   
+#CamApplicatonとfileApplicationがGUIの表示される部分
 
 
 
@@ -170,14 +173,15 @@ class CamApplication(tk.Frame):
         self.fcreator = None
         self.decoder = self.cam.decoder()
         #canvasの作成、変数名をcanvasにすると下の方で生成してるcanvasとかぶる
-        self.canvasw = tk.Canvas(self.cam_window)
-        self.canvasw.pack(fill = tk.BOTH,expand=True)
+        self.canvas_window = tk.Canvas(self.cam_window)
+        self.canvas_window.pack(fill = tk.BOTH,expand=True)
 
 
         #フレームレートで選択できる値
         self.framerateValues = [1, 10, 50, 100, 125, 250, 500, 950, 1000, 
                                         1500, 2000, 2500, 3000, 3200, 4000, 5000, 
                                         8000, 10000, 20000, 25000, 30000]
+
         
         self.framerateStr = tk.IntVar()
         self.resolutionStr = tk.StringVar()
@@ -205,6 +209,8 @@ class CamApplication(tk.Frame):
         self.setup_left_side()
         self.setup_right_side()
 
+        self.create_graph()
+
 
         self.delay = 15
         self.updateID = 0
@@ -223,17 +229,15 @@ class CamApplication(tk.Frame):
         #graphの生成
         #---------------------------------------------
 
-        #いまは場所を作っただけ
+        self.graph = ttk.LabelFrame(self.left_container,
+                                    text="graph"
+                                     )
 
+        self.graph.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
 
-        self.canvas = ttk.LabelFrame(self.left_container,
-                                    text="グラフの表示"
-                                                )
-        self.canvas.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
+        #self.graph_label = ttk.Label(self.canvas,text ="グラフの作成")
+        #self.graph_label.pack(padx=10,pady=20)
 
-        self.gurahukari_label = ttk.Label(self.canvas,text ="グラフの作成")
-        self.gurahukari_label.pack(padx=10,pady=20)
-        
         #---------------------------------------------------
         # 高さ判定のフレームの作成
         #---------------------------------------------------
@@ -310,6 +314,7 @@ class CamApplication(tk.Frame):
         #---------------------------------------------------
         # resolution
         #---------------------------------------------------
+
         self.resolutionLabel = ttk.Label(self.setframe,text="Resolution[pixel]", width=20)
         self.resolutionLabel.grid(row=2,column=0,sticky="news",padx=5, pady=5)
         
@@ -322,6 +327,7 @@ class CamApplication(tk.Frame):
         #---------------------------------------------------
         # Acquisition mode
         #---------------------------------------------------
+
         self.acqusitionLabel = ttk.Label(self.setframe,text="Acquisition mode", width=18)
         self.acqusitionLabel.grid(row=3,column=0,sticky="news",padx=5, pady=5)
     
@@ -410,8 +416,8 @@ class CamApplication(tk.Frame):
         self.updateID = self.after(self.delay, self.update)
 
     def updatecanvas(self, data):
-        cw = self.canvasw.winfo_width()
-        ch = self.canvasw.winfo_height()
+        cw = self.canvas_window.winfo_width()
+        ch = self.canvas_window.winfo_height()
         w = data.resolution().width
         h = data.resolution().height
         scale = 1
@@ -421,12 +427,12 @@ class CamApplication(tk.Frame):
         array = self.decoder.decode(data)
         i = Image.fromarray(array).resize((int(w*scale), int(h*scale)))
         self.img = ImageTk.PhotoImage(image=i)
-        self.canvasw.delete("all")
+        self.canvas_window.delete("all")
         pos = [(cw-i.width)/2,(ch-i.height)/2]
 
         
-        self.canvasw.create_image(pos[0], pos[1], anchor="nw", image=self.img)
-        self.canvasw.create_text(pos[0]+5, pos[1]+5, anchor="nw", 
+        self.canvas_window.create_image(pos[0], pos[1], anchor="nw", image=self.img)
+        self.canvas_window.create_text(pos[0]+5, pos[1]+5, anchor="nw", 
                                 text="SequeceNo:" + str(data.sequenceNo()),
                                 font=self.font, fill="limeGreen")
 
@@ -522,6 +528,25 @@ class CamApplication(tk.Frame):
         self.updateResolutionList()
         self.updateShutterList()
         self.locker.release()
+
+
+        #グラフの情報
+    def create_graph(self):
+        fig,ax = plt.subplots(figsize=(4,3),dpi=100)
+
+        x=[1,2,3,4,5]
+        y=[2,3,5,7,11]
+        ax.plot(x,y,marker="o",color="blue",label="de-ta")
+        ax.set_title("sanpul")
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.legend()
+        ax.grid(True)
+
+        self.canvas_g = FigureCanvasTkAgg(fig,master=self.graph)
+        self.canvas_g.draw()
+        self.canvas_g.get_tk_widget().pack(fill=tk.BOTH,expand=True)
+
 
 
     
