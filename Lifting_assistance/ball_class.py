@@ -8,8 +8,8 @@ import mediapipe as mp
 BASE_DIR = Path(__file__).resolve().parent
 path = BASE_DIR / "../movie/zikken3.avi"
 
+#YOLOによってボールを検出するクラス
 class BallDetecter:
-
     def __init__(self):
          self.model = YOLO("yolov8n.pt")
     
@@ -27,7 +27,8 @@ class BallDetecter:
                 # cv2.rectangle(frame, (int(x1), int(y1) ), (int(x2), int(y2)), (0,0,255), 2)
                 # cv2.circle(frame, (int(cx),int(cy)), 5,(0,0,255), -1)
         return None,None
-                      
+
+#mediapipeでつま先の座標、鼻の座標を得るクラス                
 class PoseDetecter:
     def __init__(self):
         self.mp_pose = mp.solutions.pose
@@ -78,6 +79,7 @@ class PoseDetecter:
     def close(self):
          self.pose.close()
 
+#接触したことを判定するクラス
 class ContactCounter:
     def __init__(self,contact_distance=40):
         self.contact_distance = contact_distance
@@ -105,6 +107,7 @@ class ContactCounter:
 
         return contact,nearest_distance
 
+#ボールが高さを判定するクラス
 class BallHeightDetecter:
     def __init__(self):
         self.is_toohigh = False
@@ -121,7 +124,7 @@ class BallHeightDetecter:
 
         return self.is_toohigh
 
-
+#ボールの座標が得られなかった時前のフレームから補完するクラス
 class BallPositionTracker:
     def __init__(self, max_missing_frame=5):
         self.last_position = None
