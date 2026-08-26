@@ -8,7 +8,8 @@ import mediapipe as mp
 import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
-import ball_detect_class
+
+from yolo.ball_detect_class import BallDetecter, ContactCounter, PoseDetecter
 
 
 
@@ -229,7 +230,7 @@ class PoseAnalyzer:
             "left_knee_angles_traj": self.left_knee_angles_traj,
             "first_frame_num": self.first_frame_num,
             "last_frame_num": self.last_frame_num,
-            "joint_pixcels": joint_pixcels,
+            "joint_pixcels": joint_pixcels
 
         }
 
@@ -308,6 +309,13 @@ def main():
     #骨格検出するクラスのインスタンス生成
     skelton_est = PoseAnalyzer(first_frame_num, last_frame_num)
 
+
+
+    toes_detect = PoseDetecter()
+    ball_detect = BallDetecter()
+    contact_counter = ContactCounter()
+
+
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -323,6 +331,14 @@ def main():
 
         #PoseAnalyzerのanalyzeメソッドを実行することで必要な情報が返る
         pose_result = skelton_est.analyze(small_frame)
+
+
+
+        toes_coordinate = toes_detect.detect_toes(small_frame)
+        ball_center,  = ball_detect.detect(small_frame)
+        contact_counter.update(ball_center, toes_coordinate)
+
+        print(contact_counter)
 
 
         #画面上に角度情報を表示
