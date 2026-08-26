@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 
 
 
+
+
 #ベクトルを２つ入れて、角度を計算する
 def calculate_angle_between_vector(v1, v2):
     v1 = np.array(v1)
@@ -48,7 +50,7 @@ try:
 
     #サッカーの動画
     # path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\video2.mp4"
-    path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\zikken1.avi"
+    path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\movie\zikkenn4.avi"
 
     # 動画キャプチャの初期化
     # cap = cv2.VideoCapture(0)  # ここではwebカメラ
@@ -60,6 +62,7 @@ try:
 
     # ウィンドウサイズを変更するスケール（例: 0.5 で半分の大きさ）
     resize_scale = 0.7
+
 
     # 保存する動画の設定
     output_filename = "output_pose_video.avi"

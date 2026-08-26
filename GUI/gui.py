@@ -237,7 +237,7 @@ class CamApplication(tk.Frame):
 
         #self.graph_label = ttk.Label(self.canvas,text ="グラフの作成")
         #self.graph_label.pack(padx=10,pady=20)
-        
+
         #---------------------------------------------------
         # 高さ判定のフレームの作成
         #---------------------------------------------------
