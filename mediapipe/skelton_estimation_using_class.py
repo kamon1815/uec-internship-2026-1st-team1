@@ -8,6 +8,7 @@ import mediapipe as mp
 import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
+import ball_detect_class
 
 
 
@@ -58,8 +59,8 @@ class PoseAnalyzer:
         self.left_knee_angles_list = []
 
         #取得したい関節の番号
-        self.right_joint_num = [self.RIGHT_HIP, self.RIGHT_KNEE, self.RIGHT_ANKLE, self.RIGHT_FOOT_INDEX]
-        self.left_joint_num = [self.LEFT_HIP, self.LEFT_KNEE, self.LEFT_ANKLE, self.LEFT_FOOT_INDEX]
+        self.joint_num_list = [self.RIGHT_HIP, self.RIGHT_KNEE, self.RIGHT_ANKLE, self.RIGHT_FOOT_INDEX,
+                        self.LEFT_HIP, self.LEFT_KNEE, self.LEFT_ANKLE, self.LEFT_FOOT_INDEX]
 
 
 
@@ -93,10 +94,10 @@ class PoseAnalyzer:
     #すべての関節の中から必要な関節を取り出す
     #入力：取得したい関節の数値が入ったリスト
     #出力：必要な関節のみのx,y座標を格納した辞書（ピクセル版と元のデータ版）
-    def get_selectecd_landmarks(self, frame, joint_nummbers):
+    def get_selectecd_landmarks(self, frame, joint_nummbers, is_draw):
         height, width, _ = frame.shape
 
-        result_pose = self.detect_pose(frame, False)
+        result_pose = self.detect_pose(frame, is_draw)
 
         # 各関節の座標を取得して出力
         #ピクセル値の保存
@@ -190,17 +191,15 @@ class PoseAnalyzer:
 
     #基本的に外部からはこのanalyzeメソッドを使用
     def analyze(self, frame):
-        
-
         #選んだ番号の関数の座標を取得
-        r_joint_pixcels, r_joint_data = self.get_selectecd_landmarks(frame, self.right_joint_num)
-        l_joint_pixcels, l_joint_data = self.get_selectecd_landmarks(frame, self.left_joint_num)
+        joint_pixcels, joint_data = self.get_selectecd_landmarks(frame, self.joint_num_list, True)
+        # l_joint_pixcels, l_joint_data = self.get_selectecd_landmarks(frame, self.left_joint_num, False)
 
         #関節角度の計算
-        angle_r_ankle = self.calc_joint_angles(self.RIGHT_ANKLE, r_joint_pixcels)
-        angle_r_knee = self.calc_joint_angles(self.RIGHT_KNEE, r_joint_pixcels)
-        angle_l_ankle = self.calc_joint_angles(self.LEFT_ANKLE, l_joint_pixcels)
-        angle_l_knee = self.calc_joint_angles(self.LEFT_KNEE, l_joint_pixcels)
+        angle_r_ankle = self.calc_joint_angles(self.RIGHT_ANKLE, joint_pixcels)
+        angle_r_knee = self.calc_joint_angles(self.RIGHT_KNEE, joint_pixcels)
+        angle_l_ankle = self.calc_joint_angles(self.LEFT_ANKLE, joint_pixcels)
+        angle_l_knee = self.calc_joint_angles(self.LEFT_KNEE, joint_pixcels)
 
 
         #リストに新たに計算した角度を追加する
@@ -230,8 +229,7 @@ class PoseAnalyzer:
             "left_knee_angles_traj": self.left_knee_angles_traj,
             "first_frame_num": self.first_frame_num,
             "last_frame_num": self.last_frame_num,
-            "r_joint_pixcels": r_joint_pixcels,
-            "l_joint_pixcels": l_joint_pixcels
+            "joint_pixcels": joint_pixcels,
 
         }
 
@@ -374,10 +372,10 @@ def main():
         
 
 
-        cv2.circle(small_frame, (int(pose_result["r_joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]), int(pose_result["r_joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1])), 5, (71, 99, 255), -1)
-        cv2.circle(small_frame, (int(pose_result["r_joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][0]), int(pose_result["r_joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][1])), 5, (0, 165, 255), -1)
-        cv2.circle(small_frame, (int(pose_result["l_joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][0]), int(pose_result["l_joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][1])), 5, (208, 224, 64), -1)
-        cv2.circle(small_frame, (int(pose_result["l_joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]), int(pose_result["l_joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1])), 5, (144, 238, 144), -1)
+        cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1])), 5, (71, 99, 255), -1)
+        cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][1])), 5, (0, 165, 255), -1)
+        cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][1])), 5, (208, 224, 64), -1)
+        cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1])), 5, (144, 238, 144), -1)
 
 
 
