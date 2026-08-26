@@ -31,25 +31,32 @@ class BallDetecter:
 class PoseDetecter:
     def __init__(self):
         self.mp_pose = mp.solutions.pose
-        self.pose = self.mp_pose.Pose()
         self.mp_drawing = mp.solutions.drawing_utils
-        self.mp_holistic = mp.solutions.holistic
+        self.pose = self.mp_pose.Pose(
+            static_image_mode = False,
+            min_detection_confidence = 0.5,
+            min_tracking_confidence = 0.5
+        )
         
-
-    def detect_toes(self,frame):
+    def detect(self,frame):
          frame_rgb = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
          result = self.pose.process(frame_rgb)
 
          toe_positions = []
+         nose_y = None
 
-         if result.pose_landmarks:
-              height,width, _ = frame.shape
-              toe_numbers = [
+         if result.pose_landmarks is None:
+             return toe_positions,nose_y
+         
+         height,width, _ = frame.shape
+         landmarks = result.pose_landmarks.landmark
+
+         toe_numbers = [
                    self.mp_pose.PoseLandmark.RIGHT_FOOT_INDEX,
                    self.mp_pose.PoseLandmark.LEFT_FOOT_INDEX
               ]
 
-              for toe_number in toe_numbers:
+         for toe_number in toe_numbers:
                    landmark = result.pose_landmarks.landmark[toe_number.value]
 
                    toe_x = int(landmark.x * width)
@@ -57,32 +64,17 @@ class PoseDetecter:
 
                    toe_positions.append((toe_x,toe_y))
 
-              self.mp_drawing.draw_landmarks(
+         nose = landmarks[self.mp_pose.PoseLandmark.NOSE.value]
+         nose_y = int(nose.y * height)
+
+         self.mp_drawing.draw_landmarks(
                    frame,
                    result.pose_landmarks,
                    self.mp_pose.POSE_CONNECTIONS
               )
 
-         return toe_positions
+         return toe_positions,nose_y
 
-    def nose_height(self,frame):
-        frame_rgb = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-        result = self.pose.process(frame_rgb)
-
-        if result.pose_landmarks:
-            height,width, _ = frame.shape
-            landmark = result.pose_landmarks.landmark[self.mp_pose.PoseLandmark.NOSE]
-
-            nose_potision = int(landmark.y * height)
-
-            self.mp_drawing_landmarks(
-                frame,
-                result.pose_landmarks,
-                self.mp_pose.POSE_CONNECTIONS
-            )
-
-        return nose_potision
-    
     def close(self):
          self.pose.close()
 
@@ -115,15 +107,46 @@ class ContactCounter:
 
 class BallHeightDetecter:
     def __init__(self):
-        pass
+        self.is_toohigh = False
 
     def update(self,ball_position, nose_height):
-        if ball_position is not None:
+        self.is_toohigh = False
+        if ball_position is None or nose_height is None:
+            return False
+        if ball_position is not None or nose_height is None:
             ball_x,ball_y = ball_position
 
-            if nose_height - ball_y > 0:
-                return True
+            if nose_height > ball_y:
+                self.is_toohigh = True
 
-        return False
+        return self.is_toohigh
+
+
+class BallPositionTracker:
+    def __init__(self, max_missing_frame=5):
+        self.last_position = None
+        self.missing_frame = 0
+        self.max_missing_frames = max_missing_frame
+
+    #FalseはYOLOによる検出、Trueは前回位置による補完を表す
+    def update(self, detected_position):
+        #YOLOがボールを検知したとき
+        if detected_position is not None:
+            self.last_position = detected_position
+            self.missing_frames = 0
+
+            return detected_position, False
+        #YOLOがボールを検知できなかった時
+        if (
+            self.last_position is not None
+            and self.missing_frames < self.max_missing_frames
+        ):
+            self.missing_frames += 1
+            #前回の位置を補完位置として返す
+            return self.last_position, True
+
+        #長時間検出できなければ位置を無効にする
+        self.last_position = None
+        return None, False
 
     
