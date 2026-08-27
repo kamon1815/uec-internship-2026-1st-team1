@@ -10,7 +10,6 @@ from collections import deque
 import matplotlib.pyplot as plt
 
 
-
 #骨格分析のクラス
 # mediapipeで骨格推定し、関節角度などを計算する
 #外部からの操作は基本的にanalyzeメソッドを使う
@@ -206,7 +205,6 @@ def main():
 
     #サッカーの動画
     # path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\video2.mp4"
-    path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\movie\zikkenn4.avi" 
 
     cap = cv2.VideoCapture(path)
 
