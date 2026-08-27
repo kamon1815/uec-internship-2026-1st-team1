@@ -9,7 +9,7 @@ import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
 
-from yolo.ball_detect_class import BallDetecter, ContactCounter, PoseDetecter
+from Lifting_assistance.ball_class import BallPositionTracker, BallDetecter, ContactCounter, PoseDetecter
 
 
 
@@ -46,11 +46,13 @@ class PoseAnalyzer:
         #追跡やグラフ表示に使用する
         self.first_frame_num = first_frame_num
         self.last_frame_num = last_frame_num
+
+        self.draw_frame_num = last_frame_num - first_frame_num
     
-        self.right_ankle_angles_traj = deque([0] * self.last_frame_num, maxlen=self.last_frame_num)
-        self.right_knee_angles_traj = deque([0] * self.last_frame_num, maxlen=self.last_frame_num)
-        self.left_ankle_angles_traj = deque([0] * self.last_frame_num, maxlen=self.last_frame_num)
-        self.left_knee_angles_traj = deque([0] * self.last_frame_num, maxlen=self.last_frame_num)
+        self.right_ankle_angles_traj = deque([0] * self.draw_frame_num, maxlen=self.draw_frame_num)
+        self.right_knee_angles_traj = deque([0] * self.draw_frame_num, maxlen=self.draw_frame_num)
+        self.left_ankle_angles_traj = deque([0] * self.draw_frame_num, maxlen=self.draw_frame_num)
+        self.left_knee_angles_traj = deque([0] * self.draw_frame_num, maxlen=self.draw_frame_num)
 
 
         #計算したすべての関節角度を保存するリスト
@@ -214,10 +216,8 @@ class PoseAnalyzer:
         self.left_ankle_angles_traj.append(angle_l_ankle)
         self.left_knee_angles_traj.append(angle_l_knee)
 
-
         self.first_frame_num += 1
         self.last_frame_num += 1
-
 
         return {
             "right_ankle_angles_list": self.right_ankle_angles_list,
@@ -233,6 +233,8 @@ class PoseAnalyzer:
             "joint_pixcels": joint_pixcels
 
         }
+
+
 
 
             
@@ -279,14 +281,18 @@ def main():
     out = cv2.VideoWriter(output_filename, fourcc, fps, (frame_width, frame_height))
 
 
-    #グラフ表示の際のx軸範囲初期設定（何フレーム分の角度を一度に表示したいか）
-    first_frame_num = 0
-    last_frame_num = 50
+    #グラフ表示の際のx軸範囲初期設定（何フレーム分の角度を一度に表示したいか）＝＝＝＝＝＝＝＝＝
+    #表示するフレーム数
+    draw_frame_num = 50
+
+    #x軸の範囲設定
+    first_frame_num = -draw_frame_num
+    last_frame_num = 0   #実際のフレーム番号はlast_frame_num - 1
 
     #グラフの初期化
     #x軸の幅を設定、時間軸、1フレームごと
     graph_x = np.arange(first_frame_num, last_frame_num)
-    graph_y = np.zeros(last_frame_num)
+    graph_y = np.zeros(draw_frame_num)
 
     
     #最初の表示部分
@@ -299,7 +305,7 @@ def main():
     plt.xlabel("frame number")
     plt.ylabel("angle[degrees]")
 
-    plt.xlim(first_frame_num, last_frame_num)
+    plt.xlim(first_frame_num, last_frame_num + 1)
     plt.ylim(0, 180)
 
     plt.legend(loc="lower left")
@@ -310,10 +316,13 @@ def main():
     skelton_est = PoseAnalyzer(first_frame_num, last_frame_num)
 
 
-
-    toes_detect = PoseDetecter()
-    ball_detect = BallDetecter()
-    contact_counter = ContactCounter()
+    #接触時にグラフにマーカーを描きたい
+    # ボール検出のクラスの初期化
+    ball_detecter = BallDetecter()
+    pose_detecter = PoseDetecter()
+    contact_counter = ContactCounter(contact_distance=60)
+    ball_tracker = BallPositionTracker(max_missing_frame=5)
+    contact_xlist = []
 
 
     while True:
@@ -334,11 +343,34 @@ def main():
 
 
 
-        toes_coordinate = toes_detect.detect_toes(small_frame)
-        ball_center,  = ball_detect.detect(small_frame)
-        contact_counter.update(ball_center, toes_coordinate)
 
-        print(contact_counter)
+
+        #ボールの接触判定＋＋＋＋＋＋＋＋
+        detected_ball_position,ball_box = ball_detecter.detect(small_frame)
+        #ボール位置を補完
+        ball_position,is_predicted = ball_tracker.update(detected_ball_position)
+    
+        if ball_position is not None:
+            ball_x,ball_y = ball_position
+    
+            if is_predicted:
+                color = (0,255,255)
+            else:
+                color = (0,0,255)
+    
+            cv2.circle(frame,(ball_x,ball_y), 7, color, -1)
+    
+            if is_predicted:
+                cv2.putText(frame, "Predicted", (ball_x+10,ball_y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+        #mediapipeを実行して鼻とつま先の座標を取得
+        toe_positions, nose_y = pose_detecter.detect(small_frame)
+    
+        #接触判定を実施
+        contact,distance = contact_counter.update(detected_ball_position,toe_positions)
+
+        print(contact)
+
+        #＋＋＋＋＋＋＋＋＋＋＋＋＋
 
 
         #画面上に角度情報を表示
@@ -399,16 +431,26 @@ def main():
 
         
         ######グラフ表示のための更新
+
+
+        if contact:
+            contact_xlist.append(pose_result["last_frame_num"] - 1)
+        print("frame_num")
+        print(pose_result["first_frame_num"], pose_result["last_frame_num"])
         
         graph_x = np.arange(pose_result["first_frame_num"], pose_result["last_frame_num"])
     
-    
+        
+        # print(len(graph_x), len(pose_result["right_ankle_angles_traj"]))
         lines_r_ankle.set_data(graph_x, pose_result["right_ankle_angles_traj"])
         lines_r_knee.set_data(graph_x, pose_result["right_knee_angles_traj"])
         lines_l_ankle.set_data(graph_x, pose_result["left_ankle_angles_traj"])
         lines_l_knee.set_data(graph_x, pose_result["left_knee_angles_traj"])
 
-        plt.xlim(graph_x.min(), graph_x.max())
+        plt.vlines(contact_xlist, 0, 180, color="palevioletred")
+        plt.xlim(graph_x.min(), graph_x.max() + 1)
+
+        # plt.show()
     
     
         plt.pause(0.01)
@@ -419,6 +461,10 @@ def main():
 
         # 縮小されたフレームを表示
         cv2.imshow('Pose Detection', small_frame)
+
+
+
+
 
 
 
