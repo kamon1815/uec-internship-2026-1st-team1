@@ -44,7 +44,10 @@ def calculate_angle_between_vector(v1, v2):
 try:
     # Mediapipeの初期化
     mp_pose = mp.solutions.pose
-    pose = mp_pose.Pose()
+    pose = mp_pose.Pose(model_complexity=0,
+                static_image_mode=False,
+                smooth_landmarks=False,
+                min_tracking_confidence=0.3)
     mp_drawing = mp.solutions.drawing_utils
     mp_holistic = mp.solutions.holistic
 
@@ -367,7 +370,7 @@ try:
             plt.xlim(graph_x.min(), graph_x.max())
         
         
-            plt.pause(0.01)
+            plt.pause(0.0000000000000000001)
             ######
 
 

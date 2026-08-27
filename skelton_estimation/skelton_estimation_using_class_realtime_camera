@@ -42,14 +42,7 @@ class PoseAnalyzer:
 
         # Mediapipeの初期化
         self.mp_pose = mp.solutions.pose
-        self.pose = self.mp_pose.Pose(
-            model_complexity=0,
-            static_image_mode=False,
-            smooth_landmarks=False,
-            min_tracking_confidence=0.3
-
-
-        )
+        self.pose = self.mp_pose.Pose()
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_holistic = mp.solutions.holistic
 
@@ -98,6 +91,7 @@ class PoseAnalyzer:
                 self.mp_drawing.draw_landmarks(
                     frame, result.pose_landmarks, self.mp_pose.POSE_CONNECTIONS
                 )
+        
 
         return result.pose_landmarks
     
@@ -286,7 +280,7 @@ def main():
         exit()
 
     #リサイズの大きさも統合するためにクラスの外で行う
-    resize_scale = 0.5
+    resize_scale = 0.7
 
     # 保存する動画の設定
     output_filename = "output_pose_video.avi"
@@ -356,8 +350,8 @@ def main():
         small_height, small_width, _ = small_frame.shape
 
 
-        # print("small_frame_shape")
-        # print(small_height, small_width)
+        print("small_frame_shape")
+        print(small_height, small_width)
 
 
         #PoseAnalyzerのanalyzeメソッドを実行することで必要な情報が返る
@@ -365,9 +359,9 @@ def main():
         # nose_y = pose_result["nose_y"]
         # toe_positions = pose_result["toe_position"]
 
-        # print("skelton_nose")
-        # print(toe_positions)
-        # print(nose_y)
+        print("skelton_nose")
+        print(toe_positions)
+        print(nose_y)
 
 
 
@@ -400,7 +394,7 @@ def main():
         #接触判定を実施
         contact,distance = contact_counter.update(detected_ball_position,toe_positions)
 
-        # print(contact)
+        print(contact)
 
         #＋＋＋＋＋＋＋＋＋＋＋＋＋
 
@@ -467,8 +461,8 @@ def main():
 
         if contact:
             contact_xlist.append(pose_result["last_frame_num"] - 1)
-        # print("frame_num")
-        # print(pose_result["first_frame_num"], pose_result["last_frame_num"])
+        print("frame_num")
+        print(pose_result["first_frame_num"], pose_result["last_frame_num"])
         
         graph_x = np.arange(pose_result["first_frame_num"], pose_result["last_frame_num"])
     
