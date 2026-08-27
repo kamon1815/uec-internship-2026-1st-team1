@@ -49,6 +49,9 @@ while True:
     elif GPUStatus == False:
         array = decoder.decode(xferData)
 
+    print("array")
+    print(array)
+
     # Show the image
     cv2.imshow("INFINICAM", array)
 
