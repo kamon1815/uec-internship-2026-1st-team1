@@ -432,8 +432,7 @@ def main():
         
         ######グラフ表示のための更新
 
- 
- 
+
         if contact:
             contact_xlist.append(pose_result["last_frame_num"] - 1)
         print("frame_num")
