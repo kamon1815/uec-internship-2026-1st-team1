@@ -34,7 +34,6 @@ class PoseAnalyzer:
     NOSE = 0
 
 
-
     #インストラクタ
     #mediapipeの初期化など
     def __init__(self, first_frame_num, last_frame_num):

@@ -291,17 +291,17 @@ def main():
     #保存した映像の読み込み
     # cam = cv2.VideoCapture(path)
 
-
+    #ハイスピードカメラの設定＋＋＋＋＋＋＋＋＋
     cam = CameraFactory().create()
 
-#フレームレート調節
+    #フレームレート調節
     cam.setFramerateShutter(240,240)
 
-# To decode image, get decoder obj from camera
+    # To decode image, get decoder obj from camera
     decoder = cam.decoder()
 
-# If a GPU device is available, decoding is done on the GPU.
-# To setup GPU device
+    # If a GPU device is available, decoding is done on the GPU.
+    # To setup GPU device
     reso = cam.resolution()
     GPUStatus = decoder.getAvailableGPUProcess()
 
@@ -317,12 +317,12 @@ def main():
     #     exit()
 
     # Set filepath to save image
-    savePath = BASE_DIR / "hello_world.bmp"
+    # savePath = BASE_DIR / "hello_world.bmp"
 
     # Function : Save single image as BMP 
-    def saveBMP(img):
-        cv2.imwrite(savePath, img)
-        print("saved a BMP image")
+    # def saveBMP(img):
+    #     cv2.imwrite(savePath, img)
+    #     print("saved a BMP image")
 
     
 
@@ -392,14 +392,14 @@ def main():
 
         xferData = cam.grab()
 
-    # Decode the data can be used as image
+        # Decode the data can be used as image
         if GPUStatus == True:
-         cam_frme = decoder.decodeGPU(xferData, True, reso.width)
+            frame = decoder.decodeGPU(xferData, True, reso.width)
         elif GPUStatus == False:
-         frame = decoder.decode(xferData)
+            frame = decoder.decode(xferData)
 
-    # Show the image
-        cv2.imshow("INFINICAM", frame)
+        # Show the image
+        # cv2.imshow("INFINICAM", frame)
         # フレームの高さと幅を取得
         height, width = frame.shape
 
