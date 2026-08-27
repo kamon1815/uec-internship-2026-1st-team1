@@ -8,6 +8,7 @@ import mediapipe as mp
 import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 
 #骨格分析のクラス
@@ -205,6 +206,10 @@ def main():
 
     #サッカーの動画
     # path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\video2.mp4"
+    #path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\movie\zikkenn4.avi" 
+    path = "C:\\Users\\intern02\\Desktop\\GitHub\\uec-internship-2026-1st-team1\\movie\\zikken3.avi"
+    BASE_DIR = Path(__file__).resolve().parent
+    #path = BASE_DIR / "../movie/zikken3.avi"
 
     cap = cv2.VideoCapture(path)
 
