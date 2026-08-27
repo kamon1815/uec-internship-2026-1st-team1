@@ -100,10 +100,14 @@ class ContactCounter:
             if nearest_distance < self.contact_distance:
                 contact = True
 
+        temp_contact = contact
         if contact and not self.was_contacting:
             self.contact_count += 1
+        elif contact and self.was_contacting:
+            contact = False
+            
 
-        self.was_contacting = contact
+        self.was_contacting = temp_contact
 
         return contact,nearest_distance
 
