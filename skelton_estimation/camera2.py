@@ -13,7 +13,10 @@ from pypuclib import CameraFactory, Camera, XferData, Resolution, Decoder,GPUSet
 
 from Lifting_assistance.ball_class import BallDetecter, BallPositionTracker, ContactCounter, PoseDetecter
 
-
+from matplotlib.backends.backend_tkagg import (
+	FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.figure import Figure
+import matplotlib.animation as animation
 
 
 
@@ -271,7 +274,6 @@ class PoseAnalyzer:
 
 
 
-
 #＋＋＋外側でやる処理（ここではmain関数、統合後にはLifftingSupportSystemクラスで行う）＋＋＋
 # カメラ映像取得
 # 映像表示（画面上にマークを付ける場合はPoseAnalyzerから必要な値だけをもらって外で表示するプログラムは書く）
@@ -408,8 +410,8 @@ def main():
         small_height, small_width = small_frame.shape
 
 
-        print("small_frame_shape")
-        print(small_height, small_width)
+        # print("small_frame_shape")
+        # print(small_height, small_width)
 
 
         #PoseAnalyzerのanalyzeメソッドを実行することで必要な情報が返る
@@ -538,6 +540,11 @@ def main():
         
         
             plt.pause(0.01)
+
+
+
+
+        
 
 
             # 縮小されたフレームを保存
