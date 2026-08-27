@@ -14,7 +14,11 @@ class BallDetecter:
          self.model = YOLO("yolov8n.pt")
     
     def detect(self,frame):
-        results = self.model(frame)
+        results = self.model.predict(
+            frame,
+            imgsz=416,
+            classes=[32],
+            verbose=False)
         boxes = results[0].boxes
         
         for box in boxes:
@@ -81,36 +85,35 @@ class PoseDetecter:
 
 #接触したことを判定するクラス
 class ContactCounter:
-    def __init__(self,contact_distance=40):
+    def __init__(self,contact_distance = 40,cooldown_frames = 40):
         self.contact_distance = contact_distance
+        self.cooldown_frames = cooldown_frames
         self.contact_count = 0
         self.was_contacting = False
+        self.cooldown_remain = 0
+        
 
     def update(self, ball_position, toe_positions):
-        contact = False
-        nearest_distance = float("inf")
+        if self.cooldown_remain > 0:
+            self.cooldown_remain -= 1
 
-        if ball_position is not None:
-            ball_x,ball_y = ball_position
+        if ball_position is None or not toe_positions : 
+            return self.was_contacting
+        
+        ball_x,ball_y = ball_position
 
-            for toe_x, toe_y in toe_positions:
-                distance = math.sqrt((ball_x - toe_x) ** 2 + (ball_y - toe_y) ** 2)
-                nearest_distance = min(nearest_distance,distance)
+        distance = min(math.hypot(ball_x-toe_x,ball_y-toe_y)for toe_x,toe_y in toe_positions)
 
-            if nearest_distance < self.contact_distance:
-                contact = True
+        is_contact = distance <= self.contact_distance
 
-        temp_contact = contact
-        if contact and not self.was_contacting:
+        if(is_contact and not self.was_contacting and self.cooldown_remain == 0):
             self.contact_count += 1
-        elif contact and self.was_contacting:
-            contact = False
-            
+            self.cooldown_remain = self.cooldown_frames
+            return True
 
-        self.was_contacting = temp_contact
+        return False
 
-        return contact,nearest_distance
-
+                
 #ボールが高さを判定するクラス
 class BallHeightDetecter:
     def __init__(self):
