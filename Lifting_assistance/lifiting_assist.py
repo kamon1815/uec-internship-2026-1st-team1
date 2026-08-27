@@ -5,6 +5,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import time
 from collections import deque
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -302,7 +303,7 @@ def main():
     frame_count = 0
     yolo_interval = 2
 
-
+    start_time = time.perf_counter()
     while True:
         ret, frame = cap.read()
 
@@ -474,8 +475,11 @@ def main():
     # リソースを解放
     cap.release()
     out.release()  # 保存用のVideoWriterを解放
+    plt.savefig("realtime_result.png")
     cv2.destroyAllWindows()
+    end_time = time.perf_counter()
     print(f"保存された動画ファイル: {output_filename}")
+    print(f"全処理時間：{end_time - start_time:.1f}秒")
 
 
 if __name__ == "__main__":
