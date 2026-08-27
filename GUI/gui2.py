@@ -21,6 +21,17 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from Lifting_assistance.ball_class import BallPositionTracker, BallDetecter, ContactCounter, PoseDetecter,BallHeightDetecter
 
+from matplotlib.backends.backend_tkagg import (
+	FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.figure import Figure
+import matplotlib.animation as animation
+
+
+from skelton_estimation.camera2 import PoseAnalyzer
+
+
+
+
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -164,12 +175,15 @@ class CamApplication(tk.Frame):
         master.title("gui")
         master.geometry("800x600")
 
+
         #ウィンドウの作成
         self.cam_window = tk.Toplevel(self)
         self.cam_window.title("camera")
         self.cam_window.geometry("800x600")
         #カメラの画面生成
         self.cam = CameraFactory().create()
+        #フレームレート調節
+        self.cam.setFramerateShutter(240,240)
         self.fcreator = None
         self.decoder = self.cam.decoder()
         #canvasの作成、変数名をcanvasにすると下の方で生成してるcanvasとかぶる
@@ -207,12 +221,16 @@ class CamApplication(tk.Frame):
         self.right_container = ttk.Frame(self)
         self.right_container.grid(row=0,column=1,sticky = "nsew",padx=5,pady=5)
 
-        self.height_judge = BallHeightDetecter()
+        # self.height_judge = BallHeightDetecter()
 
-        self.position_judge = BallHeightDetecter()
+        # self.position_judge = BallHeightDetecter()
 
-        
+        #PoseAnalyzerで必要なものの初期化
+        self.draw_frame_num = 50
 
+        #x軸の範囲設定
+        self.first_frame_num = -self.draw_frame_num
+        self.last_frame_num = 0   #実際のフレーム番号はlast_frame_num - 1
 
 
 
@@ -220,6 +238,20 @@ class CamApplication(tk.Frame):
         self.setup_right_side()
 
         self.create_graph()
+
+        
+
+        #骨格検出するクラスのインスタンス生成
+        self.skelton_est = PoseAnalyzer(self.first_frame_num, self.last_frame_num)
+
+
+        #接触時にグラフにマーカーを描きたい
+        # ボール検出のクラスの初期化
+        self.ball_detecter = BallDetecter()
+        self.contact_counter = ContactCounter(contact_distance=60)
+        self.ballheight_detecter = BallHeightDetecter()
+        self.ball_tracker = BallPositionTracker(max_missing_frame=5)
+        self.contact_xlist = []
 
 
         self.delay = 15
@@ -258,9 +290,7 @@ class CamApplication(tk.Frame):
 
         #self.height_judge = BallHeightDetecter()
 
-
-
-        self.height_judge_label = ttk.Label(self.height_judge_Frame,textvariable =self.judge_height)
+        self.height_judge_label = ttk.Label(self.height_judge_Frame, font=("Arial", 20))
         self.height_judge_label.pack(padx=10,pady=20)
 
     #右側の作成
@@ -278,7 +308,7 @@ class CamApplication(tk.Frame):
                                           )
         self.posture_judge_frame.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
 
-        self.posture_judge_label = ttk.Label(self.posture_judge_frame,textvariable=self.judge_position)
+        self.posture_judge_label = ttk.Label(self.posture_judge_frame, font=("Arial", 20))
         self.posture_judge_label.pack(padx=10,pady=20)
         
         #---------------------------------------------------
@@ -417,18 +447,71 @@ class CamApplication(tk.Frame):
         self.updateResolutionList()
         self.updateShutterList()
         self.updateAcquisition()
-        self.update_judge_height()
-        self.update_judge_position()
 
 
 
     def draw_image(self,photo):
         self.canvas.create_image(0,0,image=photo,anchor=tk.NW)
 
-
+    #グラフやカメラ映像の更新はすべてここにまとめる
     def update(self):
+        #ハイスピードカメラからデータを取得
         data = self.cam.grab()
-        self.updatecanvas(data)
+        small_frame = self.updatecanvas(data)
+
+        pose_result, nose_y, toe_positions = self.skelton_est.analyze(small_frame)
+        if pose_result is not None:
+
+            #ボールの接触判定＋＋＋＋＋＋＋＋
+            #YOLOによりボールの位置を追跡
+            detected_ball_position,ball_box = self.ball_detecter.detect(small_frame)
+            #ボール位置を補完
+            ball_position,is_predicted = self.ball_tracker.update(detected_ball_position)
+        
+            if ball_position is not None:
+                ball_x,ball_y = ball_position
+        
+                if is_predicted:
+                    color = (0,255,255)
+                else:
+                    color = (0,0,255)
+        
+                # cv2.circle(frame,(ball_x,ball_y), 7, color, -1)
+                r = 4
+                self.canvas_window.create_oval(ball_x + self.pos[0] - r, ball_y + self.pos[1] - r, ball_x + self.pos[0] + r, ball_y + self.pos[1] + r, fill="white")
+
+                
+        
+                if is_predicted:
+                    # cv2.putText(frame, "Predicted", (ball_x+10,ball_y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+                    self.canvas_window.create_text(ball_x + self.pos[0]+10,ball_y + self.pos[1], anchor="nw", 
+                                                    text="Predicted",
+                                                    font=self.font, fill="white")
+        
+            #ボールの高さ判定
+            is_toohigh = self.ballheight_detecter.update(ball_position,nose_y)
+
+            self.update_height_judge_label(is_toohigh)
+        
+        
+            #接触判定を実施
+            contact,distance = self.contact_counter.update(detected_ball_position,toe_positions)
+
+            print(contact)
+            self.update_contact_count_label(contact)
+            
+
+           
+
+            #＋＋＋＋＋＋＋＋＋＋＋＋＋
+
+          
+            
+            # print("detect")
+            self.update_graph(pose_result, contact)
+            self.update_angle_text_and_draw(pose_result, small_frame)
+
+
         self.updateID = self.after(self.delay, self.update)
 
     def updatecanvas(self, data):
@@ -440,17 +523,47 @@ class CamApplication(tk.Frame):
         if cw > 1 and ch > 1:
             scale = cw/w if cw/w < ch/h else ch/h
 
-        array = self.decoder.decode(data)
-        i = Image.fromarray(array).resize((int(w*scale), int(h*scale)))
-        self.img = ImageTk.PhotoImage(image=i)
-        self.canvas_window.delete("all")
-        pos = [(cw-i.width)/2,(ch-i.height)/2]
+        frame = self.decoder.decode(data)
+
+        # フレームサイズを縮小
+        small_frame = cv2.resize(frame, (int(w * scale), int(h * scale)))
+
+        frame_rgb = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
 
         
-        self.canvas_window.create_image(pos[0], pos[1], anchor="nw", image=self.img)
-        self.canvas_window.create_text(pos[0]+5, pos[1]+5, anchor="nw", 
-                                text="SequeceNo:" + str(data.sequenceNo()),
-                                font=self.font, fill="limeGreen")
+                
+
+        # i = Image.fromarray(frame_rgb).resize((int(w*scale), int(h*scale)))
+        i = Image.fromarray(frame_rgb)
+
+
+    
+
+        #コントラストを変える
+        # small_frame = cv2.convertScaleAbs(small_frame, alpha=2.0, beta=60)
+
+
+        self.img = ImageTk.PhotoImage(image=i)
+        
+        self.pos = [(cw-i.width)/2,(ch-i.height)/2]
+        self.seq_no = data.sequenceNo()
+
+        self.update_canvaswindow()
+
+        
+        
+        return small_frame
+
+    def update_canvaswindow(self, ):
+        self.canvas_window.delete("all")
+        self.canvas_window.create_image(self.pos[0], self.pos[1], anchor="nw", image=self.img)
+        # self.canvas_window.create_text(self.pos[0]+5, self.pos[1]+5, anchor="nw", 
+        #                         text="SequeceNo:" + str(self.seq_no),
+        #                         font=self.font, fill="white")
+
+
+        
+
 
     def updateFramerate(self, e):
         rate = self.framerateStr.get()
@@ -547,21 +660,107 @@ class CamApplication(tk.Frame):
 
 
         #グラフの情報
+        #グラフの初期化
     def create_graph(self):
-        fig,ax = plt.subplots(figsize=(4,3),dpi=100)
+        self.fig,self.ax = plt.subplots(figsize=(4,3),dpi=100)
 
-        x=[1,2,3,4,5]
-        y=[2,3,5,7,11]
-        ax.plot(x,y,marker="o",color="blue",label="de-ta")
-        ax.set_title("sanpul")
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.legend()
-        ax.grid(True)
+        #グラフの初期化
+        #x軸の幅を設定、時間軸、1フレームごと
+        graph_x = np.arange(self.first_frame_num, self.last_frame_num)
+        graph_y = np.zeros(self.draw_frame_num)
 
-        self.canvas_g = FigureCanvasTkAgg(fig,master=self.graph)
+        
+        #最初の表示部分
+        self.lines_r_ankle, = self.ax.plot(graph_x, graph_y, color="#ff6347", label="Angle R Ankle")
+        self.lines_r_knee, = self.ax.plot(graph_x, graph_y, color="#ffa500", label="Angle R Knee")
+        self.lines_l_ankle, = self.ax.plot(graph_x, graph_y, color="#40e0d0", label="Angle L Ankle")
+        self.lines_l_knee, = self.ax.plot(graph_x, graph_y, color="#90ee90", label="Angle L Knee")
+
+        self.ax.set_title("joint degree")
+        self.ax.set_xlabel("frame number")
+        self.ax.set_ylabel("angle[degrees]")
+
+        self.ax.set_xlim(self.first_frame_num, self.last_frame_num + 1)
+        self.ax.set_ylim(0, 180)
+
+        self.ax.legend(loc="lower left")
+
+
+        self.canvas_g = FigureCanvasTkAgg(self.fig,master=self.graph)
         self.canvas_g.draw()
         self.canvas_g.get_tk_widget().pack(fill=tk.BOTH,expand=True)
+
+
+    #グラフの更新
+    def update_graph(self,pose_result, contact):
+
+        if contact:
+            self.contact_xlist.append(pose_result["last_frame_num"] - 1)
+        # print("detect2")
+
+        graph_x = np.arange(pose_result["first_frame_num"], pose_result["last_frame_num"])
+
+        self.lines_r_ankle.set_data(graph_x, pose_result["right_ankle_angles_traj"])
+        self.lines_r_knee.set_data(graph_x, pose_result["right_knee_angles_traj"])
+        self.lines_l_ankle.set_data(graph_x, pose_result["left_ankle_angles_traj"])
+        self.lines_l_knee.set_data(graph_x, pose_result["left_knee_angles_traj"])
+
+        self.ax.vlines(self.contact_xlist, 0, 180, color="palevioletred")
+        self.ax.set_xlim(graph_x.min(), graph_x.max())
+
+        self.canvas_g.draw_idle()
+
+
+    def update_angle_text_and_draw(self, pose_result, small_frame):
+        self.canvas_window.create_text(self.pos[0]+5, self.pos[1]+5, anchor="nw", 
+                                        text=f"Angle R Ankle: {int(pose_result["right_ankle_angles_list"][-1])}",
+                                        font=("Arial", 15), fill="white")
+        self.canvas_window.create_text(self.pos[0]+5, self.pos[1]+25, anchor="nw", 
+                                        text=f"Angle R Knee: {int(pose_result["right_knee_angles_list"][-1])}",
+                                        font=("Arial", 15), fill="white")
+        self.canvas_window.create_text(self.pos[0]+5, self.pos[1]+45, anchor="nw", 
+                                        text=f"Angle L Ankle: {int(pose_result["left_ankle_angles_list"][-1])}",
+                                        font=("Arial", 15), fill="white")
+        self.canvas_window.create_text(self.pos[0]+5, self.pos[1]+65, anchor="nw", 
+                                        text=f"Angle L Knee: {int(pose_result["left_knee_angles_list"][-1])}",
+                                        font=("Arial", 15), fill="white")
+
+        r = 4
+        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1]) + self.pos[1] + r,  fill="white")
+        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][1]) + self.pos[1] + r,  fill="white")
+        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][1]) + self.pos[1] + r,  fill="white")
+        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1]) + self.pos[1] + r,  fill="white")
+
+
+
+    def update_contact_count_label(self, contact):
+
+        self.posture_judge_label.config(
+            text=f"Lifting Count: {self.contact_counter.contact_count}"
+        )
+
+    def update_height_judge_label(self, is_too_high):
+        if is_too_high:
+            self.height_judge_label.config(
+                text=f"BALL IS TOO HIGH"
+            )
+        else:
+            self.height_judge_label.config(
+                text=f""
+                )
+      
+
+        
+
+        
+
+
+
+
+
+
+
+
 
     def update_judge_height(self,code):
         if code == True:
@@ -714,6 +913,8 @@ def main():
     notebook.add(camapp, text="cam")
     fileapp = FileApplication(master = root)
     notebook.add(fileapp, text="file")
+
+
 
    
 

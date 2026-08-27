@@ -11,7 +11,11 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from pypuclib import CameraFactory, Camera, XferData, Resolution, Decoder,GPUSetup
 
-from Lifting_assistance.ball_class import BallDetecter,PoseDetecter,ContactCounter,BallHeightDetecter, BallPositionTracker
+from Lifting_assistance.ball_class import BallDetecter, BallPositionTracker, ContactCounter, PoseDetecter
+
+
+
+
 
 #骨格分析のクラス
 # mediapipeで骨格推定し、関節角度などを計算する
@@ -34,13 +38,17 @@ class PoseAnalyzer:
     NOSE = 0
 
 
+
     #インストラクタ
     #mediapipeの初期化など
     def __init__(self, first_frame_num, last_frame_num):
 
         # Mediapipeの初期化
         self.mp_pose = mp.solutions.pose
-        self.pose = self.mp_pose.Pose()
+        self.pose = self.mp_pose.Pose(model_complexity=0,
+                static_image_mode=False,
+                smooth_landmarks=False,
+                min_tracking_confidence=0.3)
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_holistic = mp.solutions.holistic
 
@@ -89,8 +97,10 @@ class PoseAnalyzer:
                 self.mp_drawing.draw_landmarks(
                     frame, result.pose_landmarks, self.mp_pose.POSE_CONNECTIONS
                 )
-
-        return result.pose_landmarks
+            
+            return result.pose_landmarks
+        
+        return None
     
                 
 
@@ -110,23 +120,27 @@ class PoseAnalyzer:
         joint_pixcels = {}
         #もとのデータである0~1の数値を保存
         joint_data = {}
+        if result_pose is not None:
+            for joint_num in joint_nummbers:
+                joint = result_pose.landmark[joint_num]
 
-        for joint_num in joint_nummbers:
-            joint = result_pose.landmark[joint_num]
+                #x,yはピクセル値として保存
+                x = int(joint.x * width)    # x座標をピクセル単位に変換
+                y = int(joint.y * height)   # y座標をピクセル単位に変換
+                z = joint.z            # z座標（深度情報）は正規化されている
 
-            #x,yはピクセル値として保存
-            x = int(joint.x * width)    # x座標をピクセル単位に変換
-            y = int(joint.y * height)   # y座標をピクセル単位に変換
-            z = joint.z            # z座標（深度情報）は正規化されている
+                
+                pixcel = np.array([x, y])
+                data = np.array([joint.x, joint.y])
 
-            
-            pixcel = np.array([x, y])
-            data = np.array([joint.x, joint.y])
+                joint_pixcels[joint_num] = pixcel
+                joint_data[joint_num] = data
 
-            joint_pixcels[joint_num] = pixcel
-            joint_data[joint_num] = data
+            return joint_pixcels, joint_data
+        else:
+            return None, None
 
-        return joint_pixcels, joint_data
+        
 
 
 
@@ -198,48 +212,50 @@ class PoseAnalyzer:
     #基本的に外部からはこのanalyzeメソッドを使用
     def analyze(self, frame):
         #選んだ番号の関数の座標を取得
-        joint_pixcels, joint_data = self.get_selectecd_landmarks(frame, self.joint_num_list, True)
+        joint_pixcels, joint_data = self.get_selectecd_landmarks(frame, self.joint_num_list, False)
         # l_joint_pixcels, l_joint_data = self.get_selectecd_landmarks(frame, self.left_joint_num, False)
-
-        #関節角度の計算
-        angle_r_ankle = self.calc_joint_angles(self.RIGHT_ANKLE, joint_pixcels)
-        angle_r_knee = self.calc_joint_angles(self.RIGHT_KNEE, joint_pixcels)
-        angle_l_ankle = self.calc_joint_angles(self.LEFT_ANKLE, joint_pixcels)
-        angle_l_knee = self.calc_joint_angles(self.LEFT_KNEE, joint_pixcels)
-
-
-        #リストに新たに計算した角度を追加する
-        self.right_ankle_angles_list.append(angle_r_ankle)
-        self.right_knee_angles_list.append(angle_r_knee)
-        self.left_ankle_angles_list.append(angle_l_ankle)
-        self.left_knee_angles_list.append(angle_l_knee)
-
-        self.right_ankle_angles_traj.append(angle_r_ankle)
-        self.right_knee_angles_traj.append(angle_r_knee)
-        self.left_ankle_angles_traj.append(angle_l_ankle)
-        self.left_knee_angles_traj.append(angle_l_knee)
-
-        self.first_frame_num += 1
-        self.last_frame_num += 1
-
-        nose_y = joint_pixcels[self.NOSE][1]
-        toe_position = [joint_pixcels[self.RIGHT_FOOT_INDEX], joint_pixcels[self.LEFT_FOOT_INDEX]]
+        if joint_pixcels is not None:
+            #関節角度の計算
+            angle_r_ankle = self.calc_joint_angles(self.RIGHT_ANKLE, joint_pixcels)
+            angle_r_knee = self.calc_joint_angles(self.RIGHT_KNEE, joint_pixcels)
+            angle_l_ankle = self.calc_joint_angles(self.LEFT_ANKLE, joint_pixcels)
+            angle_l_knee = self.calc_joint_angles(self.LEFT_KNEE, joint_pixcels)
 
 
+            #リストに新たに計算した角度を追加する
+            self.right_ankle_angles_list.append(angle_r_ankle)
+            self.right_knee_angles_list.append(angle_r_knee)
+            self.left_ankle_angles_list.append(angle_l_ankle)
+            self.left_knee_angles_list.append(angle_l_knee)
 
-        return {
-            "right_ankle_angles_list": self.right_ankle_angles_list,
-            "right_knee_angles_list": self.right_knee_angles_list,
-            "left_ankle_angles_list": self.left_ankle_angles_list,
-            "left_knee_angles_list": self.left_knee_angles_list,
-            "right_ankle_angles_traj": self.right_ankle_angles_traj,
-            "right_knee_angles_traj": self.right_knee_angles_traj,
-            "left_ankle_angles_traj": self.left_ankle_angles_traj,
-            "left_knee_angles_traj": self.left_knee_angles_traj,
-            "first_frame_num": self.first_frame_num,
-            "last_frame_num": self.last_frame_num,
-            "joint_pixcels": joint_pixcels
-        }, nose_y, toe_position
+            self.right_ankle_angles_traj.append(angle_r_ankle)
+            self.right_knee_angles_traj.append(angle_r_knee)
+            self.left_ankle_angles_traj.append(angle_l_ankle)
+            self.left_knee_angles_traj.append(angle_l_knee)
+
+            self.first_frame_num += 1
+            self.last_frame_num += 1
+
+            nose_y = joint_pixcels[self.NOSE][1]
+            toe_position = [joint_pixcels[self.RIGHT_FOOT_INDEX], joint_pixcels[self.LEFT_FOOT_INDEX]]
+
+
+
+            return {
+                "right_ankle_angles_list": self.right_ankle_angles_list,
+                "right_knee_angles_list": self.right_knee_angles_list,
+                "left_ankle_angles_list": self.left_ankle_angles_list,
+                "left_knee_angles_list": self.left_knee_angles_list,
+                "right_ankle_angles_traj": self.right_ankle_angles_traj,
+                "right_knee_angles_traj": self.right_knee_angles_traj,
+                "left_ankle_angles_traj": self.left_ankle_angles_traj,
+                "left_knee_angles_traj": self.left_knee_angles_traj,
+                "first_frame_num": self.first_frame_num,
+                "last_frame_num": self.last_frame_num,
+                "joint_pixcels": joint_pixcels
+            }, nose_y, toe_position
+        else:
+            return None, None, None
 
 
 
@@ -267,48 +283,60 @@ def main():
     #動画の読み込み（カメラ映像取得の代わりに）
     # path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\video2.mp4"
     # path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\movie\zikkenn4.avi" 
+    
+    
+    
     BASE_DIR = Path(__file__).resolve().parent
-    path = BASE_DIR / "../movie/zikken3.avi"
+    # path = BASE_DIR / "../movie/zikken3.avi"
+    #保存した映像の読み込み
+    # cam = cv2.VideoCapture(path)
 
-    cap = cv2.VideoCapture(path)
-
+    #ハイスピードカメラの設定＋＋＋＋＋＋＋＋＋
     cam = CameraFactory().create()
 
-#フレームレート調節
+    #フレームレート調節
     cam.setFramerateShutter(240,240)
 
-# To decode image, get decoder obj from camera
+    # To decode image, get decoder obj from camera
     decoder = cam.decoder()
 
-# If a GPU device is available, decoding is done on the GPU.
-# To setup GPU device
+    # If a GPU device is available, decoding is done on the GPU.
+    # To setup GPU device
     reso = cam.resolution()
     GPUStatus = decoder.getAvailableGPUProcess()
 
     if GPUStatus == True:
-     param = GPUSetup(reso.width, reso.height)
-     decoder.setupGPUDecode(param)
-     print("Decode using a GPU device")
+        param = GPUSetup(reso.width, reso.height)
+        decoder.setupGPUDecode(param)
+        print("Decode using a GPU device")
     elif GPUStatus == False:
-     print("Since GPU is not available, decode using CPU")
+        print("Since GPU is not available, decode using CPU")
 
-    if not cap.isOpened():
-        print("Error: カメラまたは動画を開けませんでした。")
-        exit()
+    # if not cam.isOpened():
+    #     print("Error: カメラまたは動画を開けませんでした。")
+    #     exit()
+
+    # Set filepath to save image
+    # savePath = BASE_DIR / "hello_world.bmp"
+
+    # Function : Save single image as BMP 
+    # def saveBMP(img):
+    #     cv2.imwrite(savePath, img)
+    #     print("saved a BMP image")
 
     
 
     #リサイズの大きさも統合するためにクラスの外で行う
     resize_scale = 0.7
 
-    # 保存する動画の設定
-    output_filename = "output_pose_video.avi"
-    fps = int(cap.get(cv2.CAP_PROP_FPS)) if cap.get(cv2.CAP_PROP_FPS) > 0 else 30
-    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) * resize_scale)  # 縮小後の幅
-    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) * resize_scale)  # 縮小後の高さ
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 動画のコーデック
+    # # 保存する動画の設定
+    # output_filename = "output_pose_video.avi"
+    # fps = int(cam.get(cv2.CAP_PROP_FPS)) if cam.get(cv2.CAP_PROP_FPS) > 0 else 30
+    # frame_width = int(cam.get(cv2.CAP_PROP_FRAME_WIDTH) * resize_scale)  # 縮小後の幅
+    # frame_height = int(cam.get(cv2.CAP_PROP_FRAME_HEIGHT) * resize_scale)  # 縮小後の高さ
+    # fourcc = cv2.VideoWriter_fourcc(*'XVID')  # 動画のコーデック
 
-    out = cv2.VideoWriter(output_filename, fourcc, fps, (frame_width, frame_height))
+    # out = cv2.VideoWriter(output_filename, fourcc, fps, (frame_width, frame_height))
 
 
     #グラフ表示の際のx軸範囲初期設定（何フレーム分の角度を一度に表示したいか）＝＝＝＝＝＝＝＝＝
@@ -364,14 +392,14 @@ def main():
 
         xferData = cam.grab()
 
-    # Decode the data can be used as image
+        # Decode the data can be used as image
         if GPUStatus == True:
-         cam_frme = decoder.decodeGPU(xferData, True, reso.width)
+            frame = decoder.decodeGPU(xferData, True, reso.width)
         elif GPUStatus == False:
-         frame = decoder.decode(xferData)
+            frame = decoder.decode(xferData)
 
-    # Show the image
-        cv2.imshow("INFINICAM", frame)
+        # Show the image
+        # cv2.imshow("INFINICAM", frame)
         # フレームの高さと幅を取得
         height, width = frame.shape
 
@@ -393,130 +421,130 @@ def main():
         print(toe_positions)
         print(nose_y)
 
+        if pose_result is not None:
 
 
 
-
-        #ボールの接触判定＋＋＋＋＋＋＋＋
-        detected_ball_position,ball_box = ball_detecter.detect(small_frame)
-        #ボール位置を補完
-        ball_position,is_predicted = ball_tracker.update(detected_ball_position)
-    
-        if ball_position is not None:
-            ball_x,ball_y = ball_position
-    
-            if is_predicted:
-                color = (0,255,255)
-            else:
-                color = (0,0,255)
-    
-            cv2.circle(frame,(ball_x,ball_y), 7, color, -1)
-    
-            if is_predicted:
-                cv2.putText(frame, "Predicted", (ball_x+10,ball_y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-        #mediapipeを実行して鼻とつま先の座標を取得
-        # toe_positions, nose_y = pose_detecter.detect(small_frame)
-
-        # print("ball_nose")
-        # print(toe_positions)
-        # print(nose_y)
-    
-        #接触判定を実施
-        contact,distance = contact_counter.update(detected_ball_position,toe_positions)
-
-        print(contact)
-
-        #＋＋＋＋＋＋＋＋＋＋＋＋＋
-
-
-        #画面上に角度情報を表示
-        #PoseAnalyzerに表示をいれたバージョン
-        # skelton_est.display_angles(small_frame, "Angle R Ankle", (0, 30), (71, 99, 255))
-        # skelton_est.display_angles(small_frame, "Angle R Knee", (0, 60), (0, 165, 255))
-        # skelton_est.display_angles(small_frame, "Angle L Ankle", (0, 90), (208, 224, 64))
-        # skelton_est.display_angles(small_frame, "Angle L Knee", (0, 120), (144, 238, 144))
-
-        cv2.putText(small_frame,
-            f"Angle R Ankle: {int(pose_result["right_ankle_angles_list"][-1])}",
-            org=(0, 30),
-            fontFace=cv2.FONT_HERSHEY_DUPLEX,
-            fontScale=0.8,
-            color=(71, 99, 255),
-            thickness=2,
-            lineType=cv2.LINE_AA)
-
-
-        cv2.putText(small_frame,
-            f"Angle R Knee: {int(pose_result["right_knee_angles_list"][-1])}",
-            org=(0, 60),
-            fontFace=cv2.FONT_HERSHEY_DUPLEX,
-            fontScale=0.8,
-            color=(0, 165, 255),
-            thickness=2,
-            lineType=cv2.LINE_AA)
-
-        cv2.putText(small_frame,
-            f"Angle L Ankle: {int(pose_result["left_ankle_angles_list"][-1])}",
-            org=(0, 90),
-            fontFace=cv2.FONT_HERSHEY_DUPLEX,
-            fontScale=0.8,
-            color=(208, 224, 64),
-            thickness=2,
-            lineType=cv2.LINE_AA)
-
-        cv2.putText(small_frame,
-            f"Angle L Knee: {int(pose_result["left_knee_angles_list"][-1])}",
-            org=(0, 120),
-            fontFace=cv2.FONT_HERSHEY_DUPLEX,
-            fontScale=0.8,
-            color=(144, 238, 144),
-            thickness=2,
-            lineType=cv2.LINE_AA)
-
+            #ボールの接触判定＋＋＋＋＋＋＋＋
+            detected_ball_position,ball_box = ball_detecter.detect(small_frame)
+            #ボール位置を補完
+            ball_position,is_predicted = ball_tracker.update(detected_ball_position)
         
-
-
-        cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1])), 5, (71, 99, 255), -1)
-        cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][1])), 5, (0, 165, 255), -1)
-        cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][1])), 5, (208, 224, 64), -1)
-        cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1])), 5, (144, 238, 144), -1)
-
-
-
-
-
+            if ball_position is not None:
+                ball_x,ball_y = ball_position
         
-        ######グラフ表示のための更新
-
-
-        if contact:
-            contact_xlist.append(pose_result["last_frame_num"] - 1)
-        print("frame_num")
-        print(pose_result["first_frame_num"], pose_result["last_frame_num"])
+                if is_predicted:
+                    color = (0,255,255)
+                else:
+                    color = (0,0,255)
         
-        graph_x = np.arange(pose_result["first_frame_num"], pose_result["last_frame_num"])
-    
+                cv2.circle(frame,(ball_x,ball_y), 7, color, -1)
         
-        # print(len(graph_x), len(pose_result["right_ankle_angles_traj"]))
-        lines_r_ankle.set_data(graph_x, pose_result["right_ankle_angles_traj"])
-        lines_r_knee.set_data(graph_x, pose_result["right_knee_angles_traj"])
-        lines_l_ankle.set_data(graph_x, pose_result["left_ankle_angles_traj"])
-        lines_l_knee.set_data(graph_x, pose_result["left_knee_angles_traj"])
+                if is_predicted:
+                    cv2.putText(frame, "Predicted", (ball_x+10,ball_y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+            #mediapipeを実行して鼻とつま先の座標を取得
+            # toe_positions, nose_y = pose_detecter.detect(small_frame)
 
-        plt.vlines(contact_xlist, 0, 180, color="palevioletred")
-        plt.xlim(graph_x.min(), graph_x.max() + 1)
+            # print("ball_nose")
+            # print(toe_positions)
+            # print(nose_y)
+        
+            #接触判定を実施
+            contact,distance = contact_counter.update(detected_ball_position,toe_positions)
 
-        # plt.show()
-    
-    
-        plt.pause(0.01)
+            print(contact)
+
+            #＋＋＋＋＋＋＋＋＋＋＋＋＋
 
 
-        # 縮小されたフレームを保存
-        out.write(small_frame)
+            #画面上に角度情報を表示
+            #PoseAnalyzerに表示をいれたバージョン
+            # skelton_est.display_angles(small_frame, "Angle R Ankle", (0, 30), (71, 99, 255))
+            # skelton_est.display_angles(small_frame, "Angle R Knee", (0, 60), (0, 165, 255))
+            # skelton_est.display_angles(small_frame, "Angle L Ankle", (0, 90), (208, 224, 64))
+            # skelton_est.display_angles(small_frame, "Angle L Knee", (0, 120), (144, 238, 144))
 
-        # 縮小されたフレームを表示
-        cv2.imshow('Pose Detection', small_frame)
+            cv2.putText(small_frame,
+                f"Angle R Ankle: {int(pose_result["right_ankle_angles_list"][-1])}",
+                org=(0, 30),
+                fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                fontScale=0.8,
+                color=(71, 99, 255),
+                thickness=2,
+                lineType=cv2.LINE_AA)
+
+
+            cv2.putText(small_frame,
+                f"Angle R Knee: {int(pose_result["right_knee_angles_list"][-1])}",
+                org=(0, 60),
+                fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                fontScale=0.8,
+                color=(0, 165, 255),
+                thickness=2,
+                lineType=cv2.LINE_AA)
+
+            cv2.putText(small_frame,
+                f"Angle L Ankle: {int(pose_result["left_ankle_angles_list"][-1])}",
+                org=(0, 90),
+                fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                fontScale=0.8,
+                color=(208, 224, 64),
+                thickness=2,
+                lineType=cv2.LINE_AA)
+
+            cv2.putText(small_frame,
+                f"Angle L Knee: {int(pose_result["left_knee_angles_list"][-1])}",
+                org=(0, 120),
+                fontFace=cv2.FONT_HERSHEY_DUPLEX,
+                fontScale=0.8,
+                color=(144, 238, 144),
+                thickness=2,
+                lineType=cv2.LINE_AA)
+
+            
+
+
+            cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1])), 5, (71, 99, 255), -1)
+            cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][1])), 5, (0, 165, 255), -1)
+            cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][1])), 5, (208, 224, 64), -1)
+            cv2.circle(small_frame, (int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]), int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1])), 5, (144, 238, 144), -1)
+
+
+
+
+
+            
+            ######グラフ表示のための更新
+
+
+            if contact:
+                contact_xlist.append(pose_result["last_frame_num"] - 1)
+            print("frame_num")
+            print(pose_result["first_frame_num"], pose_result["last_frame_num"])
+            
+            graph_x = np.arange(pose_result["first_frame_num"], pose_result["last_frame_num"])
+        
+            
+            # print(len(graph_x), len(pose_result["right_ankle_angles_traj"]))
+            lines_r_ankle.set_data(graph_x, pose_result["right_ankle_angles_traj"])
+            lines_r_knee.set_data(graph_x, pose_result["right_knee_angles_traj"])
+            lines_l_ankle.set_data(graph_x, pose_result["left_ankle_angles_traj"])
+            lines_l_knee.set_data(graph_x, pose_result["left_knee_angles_traj"])
+
+            plt.vlines(contact_xlist, 0, 180, color="palevioletred")
+            plt.xlim(graph_x.min(), graph_x.max() + 1)
+
+            # plt.show()
+        
+        
+            plt.pause(0.01)
+
+
+            # 縮小されたフレームを保存
+            # out.write(small_frame)
+
+            # 縮小されたフレームを表示
+            cv2.imshow('Pose Detection', small_frame)
 
 
 
@@ -525,7 +553,7 @@ def main():
 
 
     # リソースを解放
-    cap.release()
+    cam.release()
     out.release()  # 保存用のVideoWriterを解放
     cv2.destroyAllWindows()
     print(f"保存された動画ファイル: {output_filename}")
