@@ -9,6 +9,8 @@ import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
 from pathlib import Path
+from pypuclib import CameraFactory, Camera, XferData, Resolution, Decoder,GPUSetup
+
 
 from Lifting_assistance.ball_class import BallPositionTracker, BallDetecter, ContactCounter, PoseDetecter
 
@@ -103,7 +105,7 @@ class PoseAnalyzer:
     #入力：取得したい関節の数値が入ったリスト
     #出力：必要な関節のみのx,y座標を格納した辞書（ピクセル版と元のデータ版）
     def get_selectecd_landmarks(self, frame, joint_nummbers, is_draw):
-        height, width, _ = frame.shape
+        height, width = frame.shape
 
         result_pose = self.detect_pose(frame, is_draw)
 
@@ -274,9 +276,31 @@ def main():
 
     cap = cv2.VideoCapture(path)
 
+    cam = CameraFactory().create()
+
+#フレームレート調節
+    cam.setFramerateShutter(240,240)
+
+# To decode image, get decoder obj from camera
+    decoder = cam.decoder()
+
+# If a GPU device is available, decoding is done on the GPU.
+# To setup GPU device
+    reso = cam.resolution()
+    GPUStatus = decoder.getAvailableGPUProcess()
+
+    if GPUStatus == True:
+     param = GPUSetup(reso.width, reso.height)
+     decoder.setupGPUDecode(param)
+     print("Decode using a GPU device")
+    elif GPUStatus == False:
+     print("Since GPU is not available, decode using CPU")
+
     if not cap.isOpened():
         print("Error: カメラまたは動画を開けませんでした。")
         exit()
+
+    
 
     #リサイズの大きさも統合するためにクラスの外で行う
     resize_scale = 0.7
@@ -336,17 +360,28 @@ def main():
 
 
     while True:
-        ret, frame = cap.read()
-        if not ret:
-            print("Error: フレームを取得できませんでした。")
-            break
+        # ret, frame = cap.read()
 
+        # if not ret:
+        #     print("Error: フレームを取得できませんでした。")
+        #     break
+
+        xferData = cam.grab()
+
+    # Decode the data can be used as image
+        if GPUStatus == True:
+         cam_frme = decoder.decodeGPU(xferData, True, reso.width)
+        elif GPUStatus == False:
+         frame = decoder.decode(xferData)
+
+    # Show the image
+        cv2.imshow("INFINICAM", frame)
         # フレームの高さと幅を取得
-        height, width, _ = frame.shape
+        height, width = frame.shape
 
         # フレームサイズを縮小
         small_frame = cv2.resize(frame, (int(width * resize_scale), int(height * resize_scale)))
-        small_height, small_width, _ = small_frame.shape
+        small_height, small_width = small_frame.shape
 
 
         print("small_frame_shape")
