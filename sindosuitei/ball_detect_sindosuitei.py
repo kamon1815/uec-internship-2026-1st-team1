@@ -1,3 +1,8 @@
+<<<<<<< Updated upstream
+=======
+#人と物の相対距離をＹＯＬＯのｚ座標に追加するコード
+
+>>>>>>> Stashed changes
 import cv2
 import torch
 import numpy as np
@@ -77,7 +82,11 @@ while cap.isOpened():
                         if depth_roi.size == 0:
                             continue
                         z_rel_p = np.median(depth_roi)
+<<<<<<< Updated upstream
             if model.names[cls_id] == "cup":
+=======
+            if model.names[cls_id] == "cup":#カップ
+>>>>>>> Stashed changes
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
                         cx = (x1+x2)/2
                         cy = (y1+y2)/2
