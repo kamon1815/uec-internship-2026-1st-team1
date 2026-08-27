@@ -268,6 +268,10 @@ class PoseAnalyzer:
 
 
 
+
+
+
+
 #＋＋＋外側でやる処理（ここではmain関数、統合後にはLifftingSupportSystemクラスで行う）＋＋＋
 # カメラ映像取得
 # 映像表示（画面上にマークを付ける場合はPoseAnalyzerから必要な値だけをもらって外で表示するプログラムは書く）
