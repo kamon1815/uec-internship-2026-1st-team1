@@ -1,5 +1,6 @@
 import tkinter as tk
 import tkinter.font as tkfont
+import cv2
 from tkinter import ttk
 from tkinter import filedialog
 from pathlib import Path
@@ -9,13 +10,18 @@ import numpy as np
 import os, csv, json, threading
 from enum import IntEnum
 
+import math
+import mediapipe as mp
+
 import pypuclib
 from pypuclib import CameraFactory, Camera, XferData, Resolution, Decoder
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-import cv2
+
+from Lifting_assistance.ball_class import BallPositionTracker, BallDetecter, ContactCounter, PoseDetecter,BallHeightDetecter
+
 
 BASE_DIR = Path(__file__).resolve().parent
 video_path = BASE_DIR / "../movie/zikken3.avi"
@@ -152,14 +158,7 @@ def add_tab(fname):
     notebook.add(tframe,text=title)
 
 
-
-
-
-
 #CamApplicatonとfileApplicationがGUIの表示される部分
-
-
-
 
 
 class CamApplication(tk.Frame):
@@ -198,6 +197,7 @@ class CamApplication(tk.Frame):
         self.isRec = False
         self.locker = threading.Lock()
         self.font = tkfont.Font(self,family="Arial",size=10,weight="bold")
+        self.judge_height = tk.StringVar(value = "高さ判定")
 
         #gridを用いて画面作成
         #画面を左右に分けている
@@ -210,6 +210,11 @@ class CamApplication(tk.Frame):
         self.left_container.grid(row=0,column=0,sticky = "nsew",padx=5,pady=5)
         self.right_container = ttk.Frame(self)
         self.right_container.grid(row=0,column=1,sticky = "nsew",padx=5,pady=5)
+
+        self.height_judge = BallHeightDetecter()
+        
+
+
 
 
         self.setup_left_side()
@@ -252,7 +257,11 @@ class CamApplication(tk.Frame):
                                                 )
         self.height_judge_Frame.grid(row=1,column=0,sticky="nsew",padx=5,pady=5)
 
-        self.height_judge_label = ttk.Label(self.height_judge_Frame,text ="高さ判定の結果を表示する")
+        self.height_judge = BallHeightDetecter()
+
+
+
+        self.height_judge_label = ttk.Label(self.height_judge_Frame,textvariable =self.judge_height)
         self.height_judge_label.pack(padx=10,pady=20)
 
     #右側の作成
@@ -552,6 +561,13 @@ class CamApplication(tk.Frame):
         self.canvas_g = FigureCanvasTkAgg(fig,master=self.graph)
         self.canvas_g.draw()
         self.canvas_g.get_tk_widget().pack(fill=tk.BOTH,expand=True)
+
+    def update_judge_height(self,code):
+        if code == True:
+            self.judge_height("失敗")
+        if code == False:
+            self.judge_height("成功")
+
 
 
 
