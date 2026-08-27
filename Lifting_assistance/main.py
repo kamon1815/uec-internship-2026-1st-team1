@@ -22,7 +22,10 @@ ballheight_detecter = BallHeightDetecter()
 ball_tracker = BallPositionTracker(max_missing_frame=5)
 video = VideoProcessor(video_path,"output.avi")
 
-while True:
+# ret, prev_frame = video.cap.read()  # 最初のフレームを取得
+# if not ret:
+#   exit()
+while video.cap.isOpened:
     ret, frame = video.cap.read()
 
     if not ret:

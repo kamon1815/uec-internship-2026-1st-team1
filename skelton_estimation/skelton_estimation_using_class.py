@@ -12,7 +12,6 @@ from pathlib import Path
 from pypuclib import CameraFactory, Camera, XferData, Resolution, Decoder,GPUSetup
 
 
-from Lifting_assistance.ball_class import BallPositionTracker, BallDetecter, ContactCounter, PoseDetecter
 
 
 
