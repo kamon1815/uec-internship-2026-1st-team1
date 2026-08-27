@@ -19,13 +19,10 @@ from pypuclib import CameraFactory, Camera, XferData, Resolution, Decoder
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-
 from Lifting_assistance.ball_class import BallPositionTracker, BallDetecter, ContactCounter, PoseDetecter,BallHeightDetecter
 
 
 BASE_DIR = Path(__file__).resolve().parent
-video_path = BASE_DIR / "../movie/zikken3.avi"
-
 
 class FILE_TYPE(IntEnum):
     CSV = 0
@@ -173,8 +170,6 @@ class CamApplication(tk.Frame):
         self.cam_window.geometry("800x600")
         #カメラの画面生成
         self.cam = CameraFactory().create()
-        self.cap = cv2.VideoCapture(video_path)
-    
         self.fcreator = None
         self.decoder = self.cam.decoder()
         #canvasの作成、変数名をcanvasにすると下の方で生成してるcanvasとかぶる
@@ -198,6 +193,7 @@ class CamApplication(tk.Frame):
         self.locker = threading.Lock()
         self.font = tkfont.Font(self,family="Arial",size=10,weight="bold")
         self.judge_height = tk.StringVar(value = "高さ判定")
+        self.judgeposition = tk.StringVar(value = "姿勢判定")
 
         #gridを用いて画面作成
         #画面を左右に分けている
@@ -212,6 +208,9 @@ class CamApplication(tk.Frame):
         self.right_container.grid(row=0,column=1,sticky = "nsew",padx=5,pady=5)
 
         self.height_judge = BallHeightDetecter()
+
+        self.position_judge = BallHeightDetecter()
+
         
 
 
@@ -257,7 +256,7 @@ class CamApplication(tk.Frame):
                                                 )
         self.height_judge_Frame.grid(row=1,column=0,sticky="nsew",padx=5,pady=5)
 
-        self.height_judge = BallHeightDetecter()
+        #self.height_judge = BallHeightDetecter()
 
 
 
@@ -279,7 +278,7 @@ class CamApplication(tk.Frame):
                                           )
         self.posture_judge_frame.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
 
-        self.posture_judge_label = ttk.Label(self.posture_judge_frame,text="姿勢判定の結果を表示する",font=("メイリオ",12))
+        self.posture_judge_label = ttk.Label(self.posture_judge_frame,textvariable=self.judge_position)
         self.posture_judge_label.pack(padx=10,pady=20)
         
         #---------------------------------------------------
@@ -418,6 +417,8 @@ class CamApplication(tk.Frame):
         self.updateResolutionList()
         self.updateShutterList()
         self.updateAcquisition()
+        self.update_judge_height()
+        self.update_judge_position()
 
 
 
@@ -567,6 +568,12 @@ class CamApplication(tk.Frame):
             self.judge_height("失敗")
         if code == False:
             self.judge_height("成功")
+
+    def update_judge_position(self,code):
+        if code == True:
+            self.judge_position("成功")
+        if code == False:
+            self.judge_position("失敗")
 
 
 
