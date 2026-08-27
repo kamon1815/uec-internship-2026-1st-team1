@@ -88,7 +88,7 @@ class PoseDetecter:
          self.pose.close()
 
 class ContactCounter:
-    def __init__(self,contact_distance=60):
+    def __init__(self,contact_distance=30):
         self.contact_distance = contact_distance
         self.contact_count = 0
         self.was_contacting = False

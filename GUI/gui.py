@@ -19,10 +19,13 @@ from pypuclib import CameraFactory, Camera, XferData, Resolution, Decoder
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+
 from Lifting_assistance.ball_class import BallPositionTracker, BallDetecter, ContactCounter, PoseDetecter,BallHeightDetecter
 
 
 BASE_DIR = Path(__file__).resolve().parent
+video_path = BASE_DIR / "../movie/zikken3.avi"
+
 
 class FILE_TYPE(IntEnum):
     CSV = 0
@@ -170,6 +173,8 @@ class CamApplication(tk.Frame):
         self.cam_window.geometry("800x600")
         #カメラの画面生成
         self.cam = CameraFactory().create()
+        self.cap = cv2.VideoCapture(video_path)
+    
         self.fcreator = None
         self.decoder = self.cam.decoder()
         #canvasの作成、変数名をcanvasにすると下の方で生成してるcanvasとかぶる

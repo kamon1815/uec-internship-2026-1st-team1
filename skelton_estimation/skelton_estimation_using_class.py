@@ -8,10 +8,10 @@ import mediapipe as mp
 import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
+from pathlib import Path
+from pypuclib import CameraFactory, Camera, XferData, Resolution, Decoder,GPUSetup
 
-from Lifting_assistance.ball_class import BallPositionTracker, BallDetecter, ContactCounter, PoseDetecter
-
-
+from Lifting_assistance.ball_class import BallDetecter,PoseDetecter,ContactCounter,BallHeightDetecter, BallPositionTracker
 
 #骨格分析のクラス
 # mediapipeで骨格推定し、関節角度などを計算する
@@ -30,6 +30,10 @@ class PoseAnalyzer:
     LEFT_KNEE = 25
     LEFT_ANKLE = 27
     LEFT_FOOT_INDEX = 31
+
+    NOSE = 0
+
+
 
     #インストラクタ
     #mediapipeの初期化など
@@ -63,7 +67,7 @@ class PoseAnalyzer:
 
         #取得したい関節の番号
         self.joint_num_list = [self.RIGHT_HIP, self.RIGHT_KNEE, self.RIGHT_ANKLE, self.RIGHT_FOOT_INDEX,
-                        self.LEFT_HIP, self.LEFT_KNEE, self.LEFT_ANKLE, self.LEFT_FOOT_INDEX]
+                        self.LEFT_HIP, self.LEFT_KNEE, self.LEFT_ANKLE, self.LEFT_FOOT_INDEX, self.NOSE]
 
 
 
@@ -98,7 +102,7 @@ class PoseAnalyzer:
     #入力：取得したい関節の数値が入ったリスト
     #出力：必要な関節のみのx,y座標を格納した辞書（ピクセル版と元のデータ版）
     def get_selectecd_landmarks(self, frame, joint_nummbers, is_draw):
-        height, width, _ = frame.shape
+        height, width = frame.shape
 
         result_pose = self.detect_pose(frame, is_draw)
 
@@ -112,8 +116,8 @@ class PoseAnalyzer:
             joint = result_pose.landmark[joint_num]
 
             #x,yはピクセル値として保存
-            x = joint.x * width    # x座標をピクセル単位に変換
-            y = joint.y * height   # y座標をピクセル単位に変換
+            x = int(joint.x * width)    # x座標をピクセル単位に変換
+            y = int(joint.y * height)   # y座標をピクセル単位に変換
             z = joint.z            # z座標（深度情報）は正規化されている
 
             
@@ -219,6 +223,11 @@ class PoseAnalyzer:
         self.first_frame_num += 1
         self.last_frame_num += 1
 
+        nose_y = joint_pixcels[self.NOSE][1]
+        toe_position = [joint_pixcels[self.RIGHT_FOOT_INDEX], joint_pixcels[self.LEFT_FOOT_INDEX]]
+
+
+
         return {
             "right_ankle_angles_list": self.right_ankle_angles_list,
             "right_knee_angles_list": self.right_knee_angles_list,
@@ -231,9 +240,7 @@ class PoseAnalyzer:
             "first_frame_num": self.first_frame_num,
             "last_frame_num": self.last_frame_num,
             "joint_pixcels": joint_pixcels
-
-        }
-
+        }, nose_y, toe_position
 
 
 
@@ -260,13 +267,37 @@ def main():
     #****************初期化設定****************
     #動画の読み込み（カメラ映像取得の代わりに）
     # path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\video2.mp4"
-    path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\movie\zikkenn4.avi" 
+    # path = r"C:\Users\intern01\Documents\GitHub\intern_team1\uec-internship-2026-1st-team1\movie\zikkenn4.avi" 
+    BASE_DIR = Path(__file__).resolve().parent
+    path = BASE_DIR / "../movie/zikken3.avi"
 
     cap = cv2.VideoCapture(path)
+
+    cam = CameraFactory().create()
+
+#フレームレート調節
+    cam.setFramerateShutter(240,240)
+
+# To decode image, get decoder obj from camera
+    decoder = cam.decoder()
+
+# If a GPU device is available, decoding is done on the GPU.
+# To setup GPU device
+    reso = cam.resolution()
+    GPUStatus = decoder.getAvailableGPUProcess()
+
+    if GPUStatus == True:
+     param = GPUSetup(reso.width, reso.height)
+     decoder.setupGPUDecode(param)
+     print("Decode using a GPU device")
+    elif GPUStatus == False:
+     print("Since GPU is not available, decode using CPU")
 
     if not cap.isOpened():
         print("Error: カメラまたは動画を開けませんでした。")
         exit()
+
+    
 
     #リサイズの大きさも統合するためにクラスの外で行う
     resize_scale = 0.7
@@ -320,26 +351,48 @@ def main():
     # ボール検出のクラスの初期化
     ball_detecter = BallDetecter()
     pose_detecter = PoseDetecter()
-    contact_counter = ContactCounter(contact_distance=60)
+    contact_counter = ContactCounter(contact_distance=100)
     ball_tracker = BallPositionTracker(max_missing_frame=5)
     contact_xlist = []
 
 
     while True:
-        ret, frame = cap.read()
-        if not ret:
-            print("Error: フレームを取得できませんでした。")
-            break
+        # ret, frame = cap.read()
 
+        # if not ret:
+        #     print("Error: フレームを取得できませんでした。")
+        #     break
+
+        xferData = cam.grab()
+
+    # Decode the data can be used as image
+        if GPUStatus == True:
+         cam_frme = decoder.decodeGPU(xferData, True, reso.width)
+        elif GPUStatus == False:
+         frame = decoder.decode(xferData)
+
+    # Show the image
+        cv2.imshow("INFINICAM", frame)
         # フレームの高さと幅を取得
-        height, width, _ = frame.shape
+        height, width = frame.shape
 
         # フレームサイズを縮小
         small_frame = cv2.resize(frame, (int(width * resize_scale), int(height * resize_scale)))
-        small_height, small_width, _ = small_frame.shape
+        small_height, small_width = small_frame.shape
+
+
+        print("small_frame_shape")
+        print(small_height, small_width)
+
 
         #PoseAnalyzerのanalyzeメソッドを実行することで必要な情報が返る
-        pose_result = skelton_est.analyze(small_frame)
+        pose_result, nose_y, toe_positions = skelton_est.analyze(small_frame)
+        # nose_y = pose_result["nose_y"]
+        # toe_positions = pose_result["toe_position"]
+
+        print("skelton_nose")
+        print(toe_positions)
+        print(nose_y)
 
 
 
@@ -363,7 +416,11 @@ def main():
             if is_predicted:
                 cv2.putText(frame, "Predicted", (ball_x+10,ball_y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
         #mediapipeを実行して鼻とつま先の座標を取得
-        toe_positions, nose_y = pose_detecter.detect(small_frame)
+        # toe_positions, nose_y = pose_detecter.detect(small_frame)
+
+        # print("ball_nose")
+        # print(toe_positions)
+        # print(nose_y)
     
         #接触判定を実施
         contact,distance = contact_counter.update(detected_ball_position,toe_positions)
