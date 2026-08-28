@@ -9,7 +9,6 @@ import time
 from collections import deque
 import matplotlib.pyplot as plt
 from pathlib import Path
-from pypuclib import CameraFactory, Camera, XferData, Resolution, Decoder,GPUSetup
 
 from ball_class import BallDetecter,PoseDetecter,ContactCounter,BallHeightDetecter, BallPositionTracker
 
@@ -480,6 +479,7 @@ def main():
     end_time = time.perf_counter()
     print(f"保存された動画ファイル: {output_filename}")
     print(f"全処理時間：{end_time - start_time:.1f}秒")
+    print(f"リフティング回数:{contact_counter.contact_count}回")
 
 
 if __name__ == "__main__":
