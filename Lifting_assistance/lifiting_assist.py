@@ -23,7 +23,7 @@ class PoseAnalyzer:
     RIGHT_HIP = 24
     RIGHT_KNEE = 26
     RIGHT_ANKLE = 28
-    RIGHT_FOOT_INDEX = 32
+    RIGHT_FOOT_INDEX = 30
 
     LEFT_HIP = 23
     LEFT_KNEE = 25
