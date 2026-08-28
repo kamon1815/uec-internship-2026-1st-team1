@@ -478,7 +478,7 @@ class CamApplication(tk.Frame):
         
                 # cv2.circle(frame,(ball_x,ball_y), 7, color, -1)
                 r = 4
-                self.canvas_window.create_oval(ball_x + self.pos[0] - r, ball_y + self.pos[1] - r, ball_x + self.pos[0] + r, ball_y + self.pos[1] + r, fill="white")
+                self.canvas_window.create_oval(ball_x + self.pos[0] - r, ball_y + self.pos[1] - r, ball_x + self.pos[0] + r, ball_y + self.pos[1] + r, fill=color)
 
                 
         
@@ -486,7 +486,7 @@ class CamApplication(tk.Frame):
                     # cv2.putText(frame, "Predicted", (ball_x+10,ball_y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
                     self.canvas_window.create_text(ball_x + self.pos[0]+10,ball_y + self.pos[1], anchor="nw", 
                                                     text="Predicted",
-                                                    font=self.font, fill="white")
+                                                    font=self.font, fill=color)
         
             #ボールの高さ判定
             is_toohigh = self.ballheight_detecter.update(ball_position,nose_y)
@@ -717,16 +717,16 @@ class CamApplication(tk.Frame):
     def update_angle_text_and_draw(self, pose_result, small_frame, toe_positions):
         self.canvas_window.create_text(self.pos[0]+5, self.pos[1]+5, anchor="nw", 
                                         text=f"Angle R Ankle: {int(pose_result["right_ankle_angles_list"][-1])}",
-                                        font=("Arial", 15), fill="white")
+                                        font=("Arial", 15), fill="#ff6347")
         self.canvas_window.create_text(self.pos[0]+5, self.pos[1]+25, anchor="nw", 
                                         text=f"Angle R Knee: {int(pose_result["right_knee_angles_list"][-1])}",
-                                        font=("Arial", 15), fill="white")
+                                        font=("Arial", 15), fill="#ffa500")
         self.canvas_window.create_text(self.pos[0]+5, self.pos[1]+45, anchor="nw", 
                                         text=f"Angle L Ankle: {int(pose_result["left_ankle_angles_list"][-1])}",
-                                        font=("Arial", 15), fill="white")
+                                        font=("Arial", 15), fill="#40e0d0")
         self.canvas_window.create_text(self.pos[0]+5, self.pos[1]+65, anchor="nw", 
                                         text=f"Angle L Knee: {int(pose_result["left_knee_angles_list"][-1])}",
-                                        font=("Arial", 15), fill="white")
+                                        font=("Arial", 15), fill="#90ee90")
 
         r = 4
         self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1]) + self.pos[1] + r,  fill="#ff6347")
@@ -735,7 +735,7 @@ class CamApplication(tk.Frame):
         self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1]) + self.pos[1] + r,  fill="#90ee90")
 
         for toe_position in toe_positions:
-            self.canvas_window.create_oval(int(toe_position[0]) + self.pos[0] - r , int(toe_position[1]) + self.pos[0] - r , int(toe_position[0]) + self.pos[0] + r , int(toe_position[1]) + self.pos[0] + r ,  fill="red")
+            self.canvas_window.create_oval(int(toe_position[0]) + self.pos[0] - r , int(toe_position[1]) + self.pos[0] - r , int(toe_position[0]) + self.pos[0] + r , int(toe_position[1]) + self.pos[0] + r ,  fill="palevioletred")
                 
 
 
