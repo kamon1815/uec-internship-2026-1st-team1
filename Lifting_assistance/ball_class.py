@@ -11,14 +11,20 @@ path = BASE_DIR / "../movie/zikken3.avi"
 #YOLOによってボールを検出するクラス
 class BallDetecter:
     def __init__(self):
-         self.model = YOLO("yolov8n.pt")
+         self.model = YOLO("yolo11n.pt")
+         self.model.export(format="openvino")
+
+         self.ov_model = YOLO("yolo11n_openvino_model/")
+
     
     def detect(self,frame):
-        results = self.model.predict(
-            frame,
-            imgsz=416,
-            classes=[32],
-            verbose=False)
+        # results = self.model.track(
+        #     frame,
+        #     imgsz=416,
+        #     classes=[32],
+        #     verbose=False)
+        results = self.ov_model(frame, device="intel:cpu")
+
         boxes = results[0].boxes
         
         for box in boxes:
@@ -85,7 +91,7 @@ class PoseDetecter:
 
 #接触したことを判定するクラス
 class ContactCounter:
-    def __init__(self,contact_distance = 40,cooldown_frames = 60):
+    def __init__(self,contact_distance = 40,cooldown_frames = 40):
         self.contact_distance = contact_distance
         self.cooldown_frames = cooldown_frames
         self.contact_count = 0
