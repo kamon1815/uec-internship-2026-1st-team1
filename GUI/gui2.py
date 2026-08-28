@@ -304,7 +304,7 @@ class CamApplication(tk.Frame):
         #---------------------------------------------------
 
         self.posture_judge_frame = ttk.LabelFrame(self.right_container, 
-                                          text="sisei"
+                                          text="count"
                                           )
         self.posture_judge_frame.grid(row=0,column=0,sticky="nsew",padx=5,pady=5)
 
@@ -472,9 +472,9 @@ class CamApplication(tk.Frame):
                 ball_x,ball_y = ball_position
         
                 if is_predicted:
-                    color = (0,255,255)
+                    color = "yellow"
                 else:
-                    color = (0,0,255)
+                    color = "red"
         
                 # cv2.circle(frame,(ball_x,ball_y), 7, color, -1)
                 r = 4
