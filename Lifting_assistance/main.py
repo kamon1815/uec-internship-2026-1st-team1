@@ -15,6 +15,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 video_path = BASE_DIR / "../movie/zikken3.avi"
 
+<<<<<<< Updated upstream
+=======
+
+
+>>>>>>> Stashed changes
 ball_detecter = BallDetecter()
 pose_detecter = PoseDetecter()
 contact_counter = ContactCounter(contact_distance=60)
