@@ -12,7 +12,7 @@ path = BASE_DIR / "../movie/zikken3.avi"
 class BallDetecter:
     def __init__(self):
          self.model = YOLO("yolo11n.pt")
-         self.model.export(format="openvino")
+        #  self.model.export(format="openvino")
 
          self.ov_model = YOLO("yolo11n_openvino_model/")
 
