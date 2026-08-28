@@ -491,6 +491,7 @@ class CamApplication(tk.Frame):
             #ボールの高さ判定
             is_toohigh = self.ballheight_detecter.update(ball_position,nose_y)
 
+            # is_toohigh = True
             self.update_height_judge_label(is_toohigh)
         
         
@@ -498,6 +499,7 @@ class CamApplication(tk.Frame):
             contact,distance = self.contact_counter.update(detected_ball_position,toe_positions)
 
             print(contact)
+            
             self.update_contact_count_label(contact)
             
 
@@ -508,6 +510,7 @@ class CamApplication(tk.Frame):
           
             
             # print("detect")
+            # contact = True
             self.update_graph(pose_result, contact)
             self.update_angle_text_and_draw(pose_result, small_frame)
 
