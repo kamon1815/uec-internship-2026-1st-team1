@@ -316,12 +316,9 @@ def main():
 
         # フレームサイズを縮小
         small_frame = cv2.resize(frame, (int(width * resize_scale), int(height * resize_scale)))
-        small_height, small_width, _ = small_frame.shape
-
+    
         #PoseAnalyzerのanalyzeメソッドを実行することで必要な情報が返る
         pose_result, nose_y, toe_positions = skelton_est.analyze(small_frame)
-        # nose_y = pose_result["nose_y"]
-        # toe_positions = pose_result["toe_position"]
 
         #ボールの接触判定＋＋＋＋＋＋＋＋
         #yoloを2回フレームに1回実行
@@ -346,12 +343,7 @@ def main():
     
             if is_predicted:
                 cv2.putText(small_frame, "Predicted", (ball_x+10,ball_y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-        #mediapipeを実行して鼻とつま先の座標を取得
-        # toe_positions, nose_y = pose_detecter.detect(small_frame)
 
-        # print("ball_nose")
-        # print(toe_positions)
-        # print(nose_y)
         is_toohigh = ballheight_detecter.update(ball_position,nose_y)
         if is_toohigh:
                 cv2.putText(small_frame,"BALL TOO HIGH", (30,160), cv2.FONT_HERSHEY_DUPLEX, 1.2, (255,0,255), 3, cv2.LINE_AA)
@@ -387,8 +379,6 @@ def main():
                         thickness=2,
                         lineType=cv2.LINE_AA)
                 
-        print(contact)
-
         #＋＋＋＋＋＋＋＋＋＋＋＋＋
 
 
