@@ -248,7 +248,7 @@ class CamApplication(tk.Frame):
         #接触時にグラフにマーカーを描きたい
         # ボール検出のクラスの初期化
         self.ball_detecter = BallDetecter()
-        self.contact_counter = ContactCounter(contact_distance=150, cooldown_frames=80)
+        self.contact_counter = ContactCounter(contact_distance=150, cooldown_frames=10)
         self.ballheight_detecter = BallHeightDetecter()
         self.ball_tracker = BallPositionTracker(max_missing_frame=5)
         self.contact_xlist = []
