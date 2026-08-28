@@ -248,7 +248,7 @@ class CamApplication(tk.Frame):
         #接触時にグラフにマーカーを描きたい
         # ボール検出のクラスの初期化
         self.ball_detecter = BallDetecter()
-        self.contact_counter = ContactCounter(contact_distance=60)
+        self.contact_counter = ContactCounter(contact_distance=150, cooldown_frames=80)
         self.ballheight_detecter = BallHeightDetecter()
         self.ball_tracker = BallPositionTracker(max_missing_frame=5)
         self.contact_xlist = []
@@ -491,15 +491,16 @@ class CamApplication(tk.Frame):
             #ボールの高さ判定
             is_toohigh = self.ballheight_detecter.update(ball_position,nose_y)
 
-            # is_toohigh = True
             self.update_height_judge_label(is_toohigh)
-        
+            
         
             #接触判定を実施
-            contact,distance = self.contact_counter.update(detected_ball_position,toe_positions)
+            contact = self.contact_counter.update(detected_ball_position,toe_positions)
 
+            print("contact")
             print(contact)
-            
+            print(detected_ball_position)
+            print(toe_positions)
             self.update_contact_count_label(contact)
             
 
@@ -509,10 +510,9 @@ class CamApplication(tk.Frame):
 
           
             
-            # print("detect")
-            # contact = True
+            # print("detect")c
             self.update_graph(pose_result, contact)
-            self.update_angle_text_and_draw(pose_result, small_frame)
+            self.update_angle_text_and_draw(pose_result, small_frame, toe_positions)
 
 
         self.updateID = self.after(self.delay, self.update)
@@ -714,7 +714,7 @@ class CamApplication(tk.Frame):
         self.canvas_g.draw_idle()
 
 
-    def update_angle_text_and_draw(self, pose_result, small_frame):
+    def update_angle_text_and_draw(self, pose_result, small_frame, toe_positions):
         self.canvas_window.create_text(self.pos[0]+5, self.pos[1]+5, anchor="nw", 
                                         text=f"Angle R Ankle: {int(pose_result["right_ankle_angles_list"][-1])}",
                                         font=("Arial", 15), fill="white")
@@ -729,10 +729,14 @@ class CamApplication(tk.Frame):
                                         font=("Arial", 15), fill="white")
 
         r = 4
-        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1]) + self.pos[1] + r,  fill="white")
-        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][1]) + self.pos[1] + r,  fill="white")
-        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][1]) + self.pos[1] + r,  fill="white")
-        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1]) + self.pos[1] + r,  fill="white")
+        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_ANKLE][1]) + self.pos[1] + r,  fill="#ff6347")
+        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.RIGHT_KNEE][1]) + self.pos[1] + r,  fill="#ffa500")
+        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_ANKLE][1]) + self.pos[1] + r,  fill="#40e0d0")
+        self.canvas_window.create_oval(int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]) + self.pos[0] - r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1]) + self.pos[1] - r, int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][0]) + self.pos[0] + r , int(pose_result["joint_pixcels"][PoseAnalyzer.LEFT_KNEE][1]) + self.pos[1] + r,  fill="#90ee90")
+
+        for toe_position in toe_positions:
+            self.canvas_window.create_oval(int(toe_position[0]) + self.pos[0] - r , int(toe_position[1]) + self.pos[0] - r , int(toe_position[0]) + self.pos[0] + r , int(toe_position[1]) + self.pos[0] + r ,  fill="red")
+                
 
 
 
