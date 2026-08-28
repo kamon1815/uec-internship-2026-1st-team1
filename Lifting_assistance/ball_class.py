@@ -85,7 +85,7 @@ class PoseDetecter:
 
 #接触したことを判定するクラス
 class ContactCounter:
-    def __init__(self,contact_distance = 40,cooldown_frames = 40):
+    def __init__(self,contact_distance = 40,cooldown_frames = 60):
         self.contact_distance = contact_distance
         self.cooldown_frames = cooldown_frames
         self.contact_count = 0
